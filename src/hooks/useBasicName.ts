@@ -186,6 +186,17 @@ export const useBasicName = ({
   const pccExpired = usePccExpired({ ownerData, wrapperData })
 
   const isLoading = publicCallsLoading || supportedTLDLoading
+  if (normalisedName === 'doowop.testing' && !isLoading) {
+    // eslint-disable-next-line no-console
+    console.log('DBG doowop', {
+      ownerData,
+      ownerDataWithSubgraphRegistrant,
+      wrapperData,
+      isWrapped,
+      registrationStatus,
+      nameWrapperAddress,
+    })
+  }
   return {
     ...validation,
     normalisedName,

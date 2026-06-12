@@ -1,4 +1,4 @@
-import type { Address, Chain } from 'viem'
+import { type Address, type Chain, getAddress } from 'viem'
 
 import { ChainWithEns } from '@ensdomains/ensjs/contracts'
 
@@ -6,8 +6,20 @@ import type { Register } from '@app/local-contracts'
 
 export const makeLocalhostChainWithEns = <T extends Chain>(
   localhost: T,
-  deploymentAddresses_: Register['deploymentAddresses'],
+  deploymentAddressesRaw: Register['deploymentAddresses'],
 ): ChainWithEns<T> => {
+  // SNRC deployment JSONs store addresses lowercase, but ensjs does strict,
+  // case-sensitive `===` comparisons against checksummed on-chain values
+  // (e.g. getOwner: `registrarOwner === nameWrapperAddress`). A lowercase
+  // NameWrapper made getOwner report wrapped names as 'registrar'-owned,
+  // hiding ownership-gated actions (Edit/Send). Checksum every address so the
+  // comparisons match.
+  const deploymentAddresses_ = Object.fromEntries(
+    Object.entries(deploymentAddressesRaw ?? {}).map(([k, v]) => [
+      k,
+      typeof v === 'string' && /^0x[0-9a-fA-F]{40}$/.test(v) ? getAddress(v) : v,
+    ]),
+  ) as Register['deploymentAddresses']
   return {
     ...localhost,
     blockExplorers: {

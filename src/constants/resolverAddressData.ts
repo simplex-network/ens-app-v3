@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Address } from 'viem'
 
-import { deploymentAddresses } from './chains'
+import { deploymentAddresses, mainnetDeploymentAddresses } from './chains'
 import { RESOLVER_INTERFACE_IDS, ResolverInterfaceId } from './resolverInterfaceIds'
 
 export type KnownResolverItem = {
@@ -32,6 +32,27 @@ export const EXTENDED_DNS_RESOLVER_MAP = {
 // ordered by recency
 export const KNOWN_RESOLVER_DATA: KnownResolverData = {
   '1': [
+    {
+      // SNRC PublicResolver (referenced via deploymentAddresses so it tracks
+      // redeploys). NameWrapper-aware — required to edit records on wrapped
+      // names without the dApp probing it live (which fails on an unreliable RPC).
+      address: mainnetDeploymentAddresses.PublicResolver,
+      deployer: 'Simplex Network',
+      tag: 'latest',
+      isNameWrapperAware: true,
+      supportsDefaultCoinType: true,
+      supportedInterfaces: [
+        RESOLVER_INTERFACE_IDS.AddressResolver,
+        RESOLVER_INTERFACE_IDS.MultiCoinAddressResolver,
+        RESOLVER_INTERFACE_IDS.NameResolver,
+        RESOLVER_INTERFACE_IDS.AbiResolver,
+        RESOLVER_INTERFACE_IDS.TextResolver,
+        RESOLVER_INTERFACE_IDS.ContentHashResolver,
+        RESOLVER_INTERFACE_IDS.DnsRecordResolver,
+        RESOLVER_INTERFACE_IDS.InterfaceResolver,
+        RESOLVER_INTERFACE_IDS.VersionableResolver,
+      ],
+    },
     {
       address: '0xF29100983E058B709F3D539b0c765937B804AC15',
       deployer: 'ENS Labs',
