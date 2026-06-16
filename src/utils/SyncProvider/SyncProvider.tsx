@@ -117,7 +117,9 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       subgraphClient.request<GraphResponse>(query).then((res) => {
         return res!._meta.block.number
       }),
-    initialData: 0,
+    // No subgraph: on-chain reads are immediate, so report fully-synced and
+    // never poll the (nonexistent) subgraph for an indexed block.
+    initialData: Number.MAX_SAFE_INTEGER,
     refetchInterval: (q) => {
       if (hasSubgraphSyncErrors.error) return false
       if (!q.state.data) return 1000
@@ -127,10 +129,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return false
     },
-    enabled:
-      !!subgraphClient &&
-      !!transactions.find((x) => x.minedData?.blockNumber) &&
-      !hasSubgraphSyncErrors.error,
+    enabled: false,
   })
 
   // reset getSubnames and graph queries when the graph block is updated

@@ -123,7 +123,6 @@ const ProfileContent = ({ isSelf, isLoading: parentIsLoading, name }: Props) => 
     isWrapped,
     wrapperData,
     registrationStatus,
-    isBasicLoading,
     refetchIfEnabled,
   } = nameDetails
 
@@ -169,13 +168,13 @@ const ProfileContent = ({ isSelf, isLoading: parentIsLoading, name }: Props) => 
     setTab_(value)
   }
 
-  const isWrappedOrLoading = isWrapped || isBasicLoading
+  // SNRC is wrapper-free, so the Permissions (fuses) tab never applies.
   const visibileTabs = useMemo(
     () =>
-      (isWrappedOrLoading ? tabs : tabs.filter((_tab) => _tab !== 'permissions')).filter((_tab) =>
-        unsupported ? _tab === 'profile' : _tab,
-      ),
-    [isWrappedOrLoading, unsupported],
+      tabs
+        .filter((_tab) => _tab !== 'permissions')
+        .filter((_tab) => (unsupported ? _tab === 'profile' : _tab)),
+    [unsupported],
   )
 
   const abilities = useAbilities({ name: normalisedName })
@@ -187,7 +186,7 @@ const ProfileContent = ({ isSelf, isLoading: parentIsLoading, name }: Props) => 
     shouldRedirect(router, 'Profile.tsx', '/profile', {
       isSelf,
       name,
-      decodedName: profile?.decodedName,
+      decodedName: profile?.decodedName as string | undefined,
       normalisedName,
       visibileTabs,
       tab,
