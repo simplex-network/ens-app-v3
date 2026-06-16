@@ -8,8 +8,8 @@ const ZERO = '0x0000000000000000000000000000000000000000'
 const subnameRegistrarAbi = parseAbi([
   'function childrenLength(bytes32) view returns (uint256)',
   'function getChildren(bytes32 parentNode, uint256 start, uint256 count) view returns (bytes32[] hashes, string[] labels)',
+  'function ownerOf(uint256 node) view returns (address)',
 ])
-const registryAbi = parseAbi(['function owner(bytes32) view returns (address)'])
 
 export type SnrcSubname = {
   node: `0x${string}`
@@ -22,9 +22,10 @@ export type SnrcSubname = {
 /**
  * On-chain subname enumeration for a parent name, replacing the subgraph. Reads
  * `SubnameRegistrar.getChildren` (labelhash + plaintext label, indexed on-chain)
- * plus the live registry owner of each child, dropping entries whose record was
- * cleared (owner == 0, i.e. "deleted"). SNRC subname sets are small, so a single
- * `getChildren` call covers them.
+ * plus each child's effective owner via `ownerOf` (the 2LD NFT holder — subnames
+ * are soulbound to the NFT). Drops entries with owner == 0, i.e. deleted, purged,
+ * or generation-dead (left over after the 2LD was re-registered). SNRC subname
+ * sets are small, so a single `getChildren` call covers them.
  */
 export const getSnrcSubnames = async (
   client: any,
@@ -33,8 +34,7 @@ export const getSnrcSubnames = async (
 ): Promise<SnrcSubname[]> => {
   const addresses = getSnrcAddresses(chainId)
   const registrar = addresses.SubnameRegistrar as Address | undefined
-  const registry = addresses.ENSRegistry as Address | undefined
-  if (!registrar || registrar === ZERO || !registry) return []
+  if (!registrar || registrar === ZERO) return []
 
   const parentNode = namehash(parentName)
   const len = (await readContract(client, {
@@ -58,13 +58,13 @@ export const getSnrcSubnames = async (
       let owner = ZERO as Address
       try {
         owner = (await readContract(client, {
-          address: registry,
-          abi: registryAbi,
-          functionName: 'owner',
-          args: [node],
+          address: registrar,
+          abi: subnameRegistrarAbi,
+          functionName: 'ownerOf',
+          args: [BigInt(node)],
         })) as Address
       } catch {
-        /* node record may have been cleared */
+        /* dead / purged / untracked */
       }
       return {
         node,
