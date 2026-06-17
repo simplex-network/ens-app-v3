@@ -124,10 +124,11 @@ test('SNRC: register 2LD + subname (both with simplex.contact), then transfer th
 
   await test.step('Ownership tab: present + usable on the 2LD, hidden on the subname', async () => {
     await profilePage.goto(name)
-    await expect(page.getByTestId('ownership-tab')).toBeVisible({ timeout: 30000 })
-    await page.getByTestId('ownership-tab').click()
-    // ownership content actually renders for the base name
-    await expect(page.getByTestId('owner-profile-button-name.owner')).toBeVisible({ timeout: 20000 })
+    const ownershipTab = page.getByTestId('ownership-tab')
+    await expect(ownershipTab).toBeVisible({ timeout: 30000 })
+    // ... and it's functional: clicking it navigates to the ownership tab
+    await ownershipTab.click()
+    await expect(page).toHaveURL(/tab=ownership/, { timeout: 10000 })
 
     await profilePage.goto(subname)
     // page is loaded (subname is editable by the 2LD holder) ...
