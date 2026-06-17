@@ -168,13 +168,17 @@ const ProfileContent = ({ isSelf, isLoading: parentIsLoading, name }: Props) => 
     setTab_(value)
   }
 
-  // SNRC is wrapper-free, so the Permissions (fuses) tab never applies.
+  const isSubname = !!name && name.split('.').length > 2
+  // SNRC is wrapper-free, so the Permissions (fuses) tab never applies. And
+  // subnames (3LD+) are soulbound to the 2LD NFT — the Ownership tab is
+  // meaningless for them; hide it.
   const visibileTabs = useMemo(
     () =>
       tabs
         .filter((_tab) => _tab !== 'permissions')
+        .filter((_tab) => (isSubname ? _tab !== 'ownership' : true))
         .filter((_tab) => (unsupported ? _tab === 'profile' : _tab)),
-    [unsupported],
+    [unsupported, isSubname],
   )
 
   const abilities = useAbilities({ name: normalisedName })

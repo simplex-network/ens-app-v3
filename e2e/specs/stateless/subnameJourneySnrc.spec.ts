@@ -1,6 +1,14 @@
 import { expect } from '@playwright/test'
+import { Address, keccak256, namehash, toBytes } from 'viem'
 
 import { test } from '../../../playwright'
+import { createAccounts } from '../../../playwright/fixtures/accounts'
+import {
+  deploymentAddresses,
+  publicClient,
+  waitForTransaction,
+  walletClient,
+} from '../../../playwright/fixtures/contracts/utils/addTestContracts'
 
 /*
  * SNRC end-to-end journey on a single .testing 2LD:
@@ -8,17 +16,28 @@ import { test } from '../../../playwright'
  *   2. add a `simplex.contact` record to the 2LD
  *   3. create a subname (mobile.<2LD>) — soulbound to the 2LD NFT
  *   4. add a `simplex.contact` record to the subname
- *   5. delete the subname
- *
- * `simplex.contact` is the MultiUrlField record (CSV of SMP-server URLs); the
- * field test-ids are `multi-url-field-simplex.contact-*`.
+ *   5. assert the Ownership tab works on the 2LD but is hidden on the subname
+ *      (subnames have no independent ownership — they're soulbound to the NFT)
+ *   6. transfer the 2LD NFT to another account
+ *   7. assert the subname followed the 2LD to the new owner (auto-reclaim +
+ *      walk-up ownerOf), and the old owner can no longer manage it
  */
 
 const CONTACT_KEY = 'simplex.contact'
 const contactInput = (page: any, i = 0) =>
   page.getByTestId(`multi-url-field-${CONTACT_KEY}-input-${i}`)
 
-test('SNRC: register 2LD, add simplex.contact to 2LD + subname, then delete the subname', async ({
+const registryOwnerAbi = [
+  { name: 'owner', type: 'function', stateMutability: 'view', inputs: [{ type: 'bytes32' }], outputs: [{ type: 'address' }] },
+] as const
+const subnameOwnerOfAbi = [
+  { name: 'ownerOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'uint256' }], outputs: [{ type: 'address' }] },
+] as const
+const baseRegistrarTransferAbi = [
+  { name: 'safeTransferFrom', type: 'function', stateMutability: 'nonpayable', inputs: [{ type: 'address' }, { type: 'address' }, { type: 'uint256' }], outputs: [] },
+] as const
+
+test('SNRC: register 2LD + subname (both with simplex.contact), then transfer the 2LD — subname follows', async ({
   page,
   login,
   time,
@@ -75,25 +94,21 @@ test('SNRC: register 2LD, add simplex.contact to 2LD + subname, then delete the 
     await contactInput(page).fill('https://smp1.example.im/2ld#H1')
     await profilePage.profileEditor.getByTestId('profile-submit-button').click()
     await transactionModal.autoComplete()
-
     await recordsPage.goto(name)
     await expect(recordsPage.getRecordValue('text', CONTACT_KEY)).toHaveText(
       'https://smp1.example.im/2ld#H1',
     )
   })
 
-  await test.step('create the subname', async () => {
+  await test.step('create the subname and add simplex.contact to it', async () => {
     await subnamesPage.goto(name)
     await subnamesPage.getAddSubnameButton.click()
     await subnamesPage.getAddSubnameInput.fill(subLabel)
     await subnamesPage.getSubmitSubnameButton.click()
-    // skip the optional records step of subname creation
     await subnamesPage.getSubmitSubnameProfileButton.click()
     await transactionModal.autoComplete()
     await expect(page).toHaveURL(new RegExp(subname.replace(/\./g, '\\.')), { timeout: 30000 })
-  })
 
-  await test.step('add simplex.contact to the subname', async () => {
     await profilePage.goto(subname)
     await profilePage.editProfileButton.click()
     await profilePage.profileEditorAddInputs([CONTACT_KEY])
@@ -101,20 +116,79 @@ test('SNRC: register 2LD, add simplex.contact to 2LD + subname, then delete the 
     await contactInput(page).fill('https://smp1.example.im/sub#H1')
     await profilePage.profileEditor.getByTestId('profile-submit-button').click()
     await transactionModal.autoComplete()
-
     await recordsPage.goto(subname)
     await expect(recordsPage.getRecordValue('text', CONTACT_KEY)).toHaveText(
       'https://smp1.example.im/sub#H1',
     )
   })
 
-  await test.step('delete the subname', async () => {
-    await profilePage.goto(subname)
-    await page.getByTestId('profile-action-Delete subname').click()
-    await transactionModal.autoComplete()
+  await test.step('Ownership tab: present + usable on the 2LD, hidden on the subname', async () => {
+    await profilePage.goto(name)
+    await expect(page.getByTestId('ownership-tab')).toBeVisible({ timeout: 30000 })
+    await page.getByTestId('ownership-tab').click()
+    // ownership content actually renders for the base name
+    await expect(page.getByTestId('owner-profile-button-name.owner')).toBeVisible({ timeout: 20000 })
 
-    // The subname should no longer be listed under the 2LD.
-    await subnamesPage.goto(name)
-    await expect(page.getByTestId(`name-item-${subname}`)).toHaveCount(0, { timeout: 30000 })
+    await profilePage.goto(subname)
+    // page is loaded (subname is editable by the 2LD holder) ...
+    await expect(page.getByTestId('profile-action-Edit profile')).toBeVisible({ timeout: 30000 })
+    // ... but it has NO ownership tab (soulbound to the 2LD)
+    await expect(page.getByTestId('ownership-tab')).toHaveCount(0)
+
+    // and a subname can't itself register subnames (single-level in the UI)
+    await subnamesPage.goto(subname)
+    await expect(page.getByTestId('subnames-tab')).toBeVisible({ timeout: 30000 })
+    await expect(page.getByTestId('add-subname-action')).toHaveCount(0)
+  })
+
+  await test.step('transfer the 2LD NFT to a new owner', async () => {
+    const owner = createAccounts().getAddress('user') as Address
+    const newOwner = createAccounts().getAddress('user2') as Address
+    const tokenId = BigInt(keccak256(toBytes(label)))
+
+    // pre-condition: subname's effective owner is the current 2LD holder
+    const before = (await publicClient.readContract({
+      address: deploymentAddresses.SubnameRegistrar as Address,
+      abi: subnameOwnerOfAbi,
+      functionName: 'ownerOf',
+      args: [BigInt(namehash(subname))],
+    })) as Address
+    expect(before.toLowerCase()).toBe(owner.toLowerCase())
+
+    const hash = await walletClient.writeContract({
+      address: deploymentAddresses.BaseRegistrarImplementation as Address,
+      abi: baseRegistrarTransferAbi,
+      functionName: 'safeTransferFrom',
+      args: [owner, newOwner, tokenId],
+      account: owner,
+    })
+    await waitForTransaction(hash)
+  })
+
+  await test.step('the subname followed the 2LD to the new owner', async () => {
+    const newOwner = createAccounts().getAddress('user2') as Address
+
+    // 2LD registry node followed the NFT (auto-reclaim)
+    const reg2ld = (await publicClient.readContract({
+      address: deploymentAddresses.ENSRegistry as Address,
+      abi: registryOwnerAbi,
+      functionName: 'owner',
+      args: [namehash(name)],
+    })) as Address
+    expect(reg2ld.toLowerCase()).toBe(newOwner.toLowerCase())
+
+    // subname's effective owner followed too (walk-up ownerOf)
+    const subOwner = (await publicClient.readContract({
+      address: deploymentAddresses.SubnameRegistrar as Address,
+      abi: subnameOwnerOfAbi,
+      functionName: 'ownerOf',
+      args: [BigInt(namehash(subname))],
+    })) as Address
+    expect(subOwner.toLowerCase()).toBe(newOwner.toLowerCase())
+
+    // and the old owner (still connected) can no longer manage the subname
+    await profilePage.goto(subname)
+    await page.reload()
+    await expect(page.getByTestId('profile-action-Edit profile')).toHaveCount(0, { timeout: 30000 })
   })
 })
