@@ -322,6 +322,11 @@ const MainMenu = ({ setCurrentView }: { setCurrentView: (view: HamburgerView) =>
             </RouteItem>
           </BaseLink>
         ))}
+        <BaseLink href="https://simplex.chat/privacy" passHref>
+          <RouteItem target="_blank">
+            <Typography>{t('navigation.privacy')}</Typography>
+          </RouteItem>
+        </BaseLink>
       </RoutesSection>
       <SocialSection>
         <SocialIcon Icon={SocialX} color="black" href={SIMPLEX_LINKS.X} />
