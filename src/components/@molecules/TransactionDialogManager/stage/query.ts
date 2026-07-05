@@ -208,9 +208,10 @@ export const createTransactionRequestUnsafe = async ({
   })
 
   const isParaConnected = hasParaConnection(connections)
+  const isMetaMask = connectorIsMetaMask(connections, connectorClient)
 
   let largestMedianGasFee = 0n
-  if (isParaConnected) {
+  if (isParaConnected || isMetaMask) {
     largestMedianGasFee = await getLargestMedianGasFee()
   }
 
@@ -222,10 +223,10 @@ export const createTransactionRequestUnsafe = async ({
     gas: gasLimit,
     parameters: ['fees', 'nonce', 'type'],
     ...('value' in transactionRequest ? { value: transactionRequest.value } : {}),
-    ...(isParaConnected ? { maxPriorityFeePerGas: largestMedianGasFee } : {}),
+    ...(isParaConnected || isMetaMask ? { maxPriorityFeePerGas: largestMedianGasFee } : {}),
   })
 
-  if (connectorIsMetaMask(connections, connectorClient)) {
+  if (isMetaMask) {
     ;(request as any).__is_metamask = true
   } else if (connectorIsPhantom(connections, connectorClient)) {
     request.accessList = request.accessList?.map((v) => [v.address, v.storageKeys]) as any
