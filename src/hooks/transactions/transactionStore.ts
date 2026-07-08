@@ -13,6 +13,10 @@ import { waitForTransaction } from './waitForTransaction'
 
 const storageKey = 'transaction-data'
 
+// Backoff before re-arming a receipt watch that viem abandoned (see the catch in
+// waitForPendingTransactions): keeps slow-to-mine txs from getting stuck pending.
+const RECEIPT_WATCH_RETRY_MS = 15_000
+
 export type TransactionStatus =
   | 'pending'
   | 'confirmed'
@@ -449,16 +453,20 @@ export function createTransactionStore(config_: ConfigWithEns) {
           })
 
           const trackedPromise = requestPromise.catch((err) => {
-            // A wallet can silently reprice/replace a pending tx, so the hash we are
-            // watching never appears on-chain and viem rejects (after its internal
-            // retries) — yet the operation still confirms under the replacement hash
-            // and the flow recovers via its own on-chain status check. Report this as
-            // info instead of letting it surface as an unhandled-promise console error.
+            // Drop the settled watch from the cache so it can be re-armed. Without this,
+            // a future waitForPendingTransactions returns this dead promise and the tx
+            // stays pending forever (the receipt watch is never restarted).
+            transactionRequestCache.delete(getCurrentTransactionHash(account, chainId, hash))
             if (err?.name === 'WaitForTransactionReceiptTimeoutError') {
+              // viem gives up looking for the receipt after ~7 blocks (its retryCount),
+              // but on a slow/flaky connection — or when a wallet reprices/replaces the
+              // tx — it may just be slow to mine or propagate. Keep it pending and
+              // re-arm the watch after a short backoff so it recovers automatically.
               // eslint-disable-next-line no-console
-              console.info(
-                `Transaction ${hash} is no longer tracked under this hash: it never appeared on-chain — the wallet most likely sped it up or replaced it, so it confirms under a different hash. This is expected and not an error.`,
-              )
+              console.info(`Transaction ${hash} not yet confirmed under this hash; still watching.`)
+              setTimeout(() => {
+                waitForPendingTransactions(account, chainId)
+              }, RECEIPT_WATCH_RETRY_MS)
               return
             }
             // eslint-disable-next-line no-console

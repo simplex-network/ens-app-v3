@@ -433,8 +433,8 @@ export const ActionButton = (props: ActionButtonProps) => {
           !_props.ethPrice,
       ),
       () => (
-        <Button data-testid="next-button" disabled>
-          {t('loading', { ns: 'common' })}
+        <Button data-testid="next-button" disabled loading>
+          {t('action.next', { ns: 'common' })}
         </Button>
       ),
     )

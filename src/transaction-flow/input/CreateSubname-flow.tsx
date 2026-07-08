@@ -237,6 +237,7 @@ const CreateSubname = ({ data: { parent, isWrapped }, dispatch, onDismiss }: Pro
                   data-testid="create-subname-next"
                   onClick={() => setView('profile-editor')}
                   disabled={!valid || isLoading}
+                  loading={isLoading}
                 >
                   {t('action.next', { ns: 'common' })}
                 </Button>
@@ -335,6 +336,7 @@ const CreateSubname = ({ data: { parent, isWrapped }, dispatch, onDismiss }: Pro
                   data-testid="create-subname-profile-next"
                   onClick={handleSubmit}
                   disabled={!valid || isLoading}
+                  loading={isLoading}
                 >
                   {isDirty
                     ? t('action.next', { ns: 'common' })

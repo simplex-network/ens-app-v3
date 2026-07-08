@@ -596,6 +596,7 @@ export const TransactionStageModal = ({
           !!requestError ||
           isTransactionRequestCachedData
         }
+        loading={requestLoading}
         onClick={() => handleSendTransaction(request!, actionName, sendTransaction)}
         data-testid="transaction-modal-confirm-button"
       >
