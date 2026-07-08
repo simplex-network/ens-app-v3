@@ -128,11 +128,10 @@ export const getNamesForAddressQueryFn =
     // (balanceOf + tokenOfOwnerByIndex on BaseRegistrar) and resolve labels via
     // the v3 on-chain labelOf. The whole set is returned as one page.
     if (pageParam && pageParam.length > 0) return [] as GetNamesForAddressReturnType
-    try {
-      return await getNamesForAddressFromChain(client, address as Address)
-    } catch {
-      return [] as GetNamesForAddressReturnType
-    }
+    // Let a total read failure propagate so the query enters its error state and the
+    // names list shows a retry affordance, instead of silently rendering an empty
+    // "no names" list when the connection is flaky.
+    return getNamesForAddressFromChain(client, address as Address)
   }
 
 const getNextPageParam =

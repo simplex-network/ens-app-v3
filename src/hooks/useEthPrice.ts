@@ -40,7 +40,10 @@ export const useEthPrice = () => {
     queryKey: ['useEthPrice', chainId, address],
     enabled: !!address && !!client,
     staleTime: 60_000,
-    refetchInterval: 300_000,
+    // Refetch every 5 min normally, but back off to 15s while errored so a transient
+    // failure on a slow connection doesn't leave the Pricing "Next" button stuck on
+    // "Loading" for up to 5 minutes.
+    refetchInterval: (q) => (q.state.status === 'error' ? 15_000 : 300_000),
     queryFn: async () => {
       const raw = await client!.request({
         method: 'eth_call',

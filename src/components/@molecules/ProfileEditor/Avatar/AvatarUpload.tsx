@@ -92,34 +92,55 @@ const UploadComponent = ({
           hash: urlHash,
         },
       })
-      const fetched = (await fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          expiry,
-          dataURL,
-          sig,
-          unverifiedAddress: address,
-        }),
-      }).then((res) => res.json())) as AvatarUploadResult
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-      if ('message' in fetched && fetched.message === 'uploaded') {
-        await invalidateMetaDataQuery(queryClient, {
-          name,
-          chainName,
-          mediaKey: 'avatar',
+      try {
+        const response = await fetch(endpoint, {
+          method: 'PUT',
+          signal: controller.signal,
+          headers: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            expiry,
+            dataURL,
+            sig,
+            unverifiedAddress: address,
+          }),
         })
-        return handleSubmit('upload', endpoint, dataURL)
-      }
 
-      if ('error' in fetched) {
-        throw new Error(fetched.error)
-      }
+        clearTimeout(timeoutId)
 
-      throw new Error('Unknown error')
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`)
+        }
+
+        const fetched = (await response.json()) as AvatarUploadResult
+
+        if ('message' in fetched && fetched.message === 'uploaded') {
+          await invalidateMetaDataQuery(queryClient, {
+            name,
+            chainName,
+            mediaKey: 'avatar',
+          })
+          return handleSubmit('upload', endpoint, dataURL)
+        }
+
+        if ('error' in fetched) {
+          throw new Error(fetched.error)
+        }
+
+        throw new Error('Unknown error')
+      } catch (err) {
+        clearTimeout(timeoutId)
+        if (err instanceof Error && err.name === 'AbortError') {
+          throw new Error('Upload timed out. Please try again.')
+        }
+        throw err
+      }
     },
   })
 
@@ -142,6 +163,7 @@ const UploadComponent = ({
         trailing={
           <Button
             disabled={isPending}
+            loading={isPending}
             colorStyle={error ? 'redSecondary' : undefined}
             onClick={() => signAndUpload()}
             data-testid="upload-button"
