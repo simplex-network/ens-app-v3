@@ -41,6 +41,7 @@ describe('getRegistrationStatus', () => {
       const result = getRegistrationStatus({
         timestamp: Date.now(),
         validation: { isETH: true, is2LD: true, isShort: true },
+        name: 'ab.testing',
       })
       expect(result).toBe('short')
     })
@@ -101,6 +102,7 @@ describe('getRegistrationStatus', () => {
         wrapperData,
         expiryData,
         priceData,
+        name: 'name.testing',
       })
       expect(result).toBe('premium')
     })
@@ -123,9 +125,99 @@ describe('getRegistrationStatus', () => {
         wrapperData,
         expiryData,
         priceData,
+        name: 'name.testing',
       })
 
       expect(result).toBe('available')
+    })
+
+    describe('TLD scoping', () => {
+      const expiredExpiryData = {
+        expiry: createDateWithValue(Date.now() - 1000),
+        gracePeriod: 0,
+        status: 'expired',
+      } as const
+
+      it('should return unsupportedTLD instead of available for a name outside the app TLD', () => {
+        for (const name of ['name.simplex', 'name.eth']) {
+          const result = getRegistrationStatus({
+            timestamp: Date.now(),
+            validation: { is2LD: true, isETH: true },
+            ownerData,
+            wrapperData,
+            expiryData: expiredExpiryData,
+            priceData: { base: 1n, premium: 0n },
+            name,
+          })
+          expect(result).toBe('unsupportedTLD')
+        }
+      })
+
+      it('should return unsupportedTLD instead of premium for a name outside the app TLD', () => {
+        const result = getRegistrationStatus({
+          timestamp: Date.now(),
+          validation: { is2LD: true, isETH: true },
+          ownerData,
+          wrapperData,
+          expiryData: expiredExpiryData,
+          priceData: { base: 1n, premium: 1n },
+          name: 'name.simplex',
+        })
+        expect(result).toBe('unsupportedTLD')
+      })
+
+      it('should return unsupportedTLD instead of short for a name outside the app TLD', () => {
+        const result = getRegistrationStatus({
+          timestamp: Date.now(),
+          validation: { is2LD: true, isETH: true, isShort: true },
+          name: 'ab.simplex',
+        })
+        expect(result).toBe('unsupportedTLD')
+      })
+
+      it('should return unsupportedTLD when available and no name is provided', () => {
+        const result = getRegistrationStatus({
+          timestamp: Date.now(),
+          validation: { is2LD: true, isETH: true },
+          ownerData,
+          wrapperData,
+          expiryData: expiredExpiryData,
+          priceData: { base: 1n, premium: 0n },
+        })
+        expect(result).toBe('unsupportedTLD')
+      })
+
+      it('should still return registered for a registered name outside the app TLD', () => {
+        const result = getRegistrationStatus({
+          timestamp: Date.now(),
+          validation: { is2LD: true, isETH: true },
+          ownerData,
+          wrapperData,
+          expiryData: {
+            expiry: createDateWithValue(Date.now() + 1000 * 60 * 60 * 24 * 30),
+            gracePeriod: 60 * 60 * 24 * 1000,
+            status: 'active',
+          },
+          name: 'name.simplex',
+        })
+        expect(result).toBe('registered')
+      })
+
+      it('should still return gracePeriod for an expiring name outside the app TLD', () => {
+        const result = getRegistrationStatus({
+          timestamp: Date.now(),
+          validation: { is2LD: true, isETH: true },
+          ownerData,
+          wrapperData,
+          expiryData: {
+            expiry: createDateWithValue(Date.now() - 1000),
+            gracePeriod: 60 * 60 * 24 * 1000,
+            status: 'gracePeriod',
+          },
+          name: 'name.simplex',
+        })
+        expect(result).toBe('gracePeriod')
+      })
     })
 
     it('should use timestamp parameter for comparisons', () => {

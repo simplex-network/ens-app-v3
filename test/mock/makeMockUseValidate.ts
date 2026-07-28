@@ -113,7 +113,7 @@ export const makeMockUseValidate = (type: MockUseValidateType): ValidationResult
     .with('invalid-2ld', () => ({
       type: 'name' as const,
       isShort: false,
-      isValid: true,
+      isValid: false,
       is2LD: true,
       isETH: true,
       labelDataArray: [

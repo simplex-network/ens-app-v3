@@ -267,6 +267,42 @@ describe('SearchInput', () => {
     await userEvent.type(screen.getByTestId('search-input-box'), '.')
     await waitFor(() => expect(screen.queryByText(`Invalid name`)).toBeInTheDocument())
   })
+  it('should show search containing a dot as invalid', async () => {
+    mockUseBreakpoint.mockReturnValue({
+      xs: true,
+      sm: true,
+      md: true,
+      lg: false,
+      xl: false,
+    })
+    render(<SearchInput />)
+    act(() => {
+      screen.getByTestId('search-input-box').focus()
+    })
+    await waitFor(() => screen.getByTestId('search-input-results'), {
+      timeout: 500,
+    })
+    await userEvent.type(screen.getByTestId('search-input-box'), 'foo.testing')
+    await waitFor(() => expect(screen.queryByText(`Invalid name`)).toBeInTheDocument())
+  })
+  it('should show search with non-latin characters as invalid', async () => {
+    mockUseBreakpoint.mockReturnValue({
+      xs: true,
+      sm: true,
+      md: true,
+      lg: false,
+      xl: false,
+    })
+    render(<SearchInput />)
+    act(() => {
+      screen.getByTestId('search-input-box').focus()
+    })
+    await waitFor(() => screen.getByTestId('search-input-results'), {
+      timeout: 500,
+    })
+    await userEvent.type(screen.getByTestId('search-input-box'), 'дом')
+    await waitFor(() => expect(screen.queryByText(`Invalid name`)).toBeInTheDocument())
+  })
   it('should debounce search input changes', async () => {
     mockUseBreakpoint.mockReturnValue({
       xs: true,

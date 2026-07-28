@@ -23,7 +23,8 @@ test('SNRC: register a .testing name end-to-end', async ({
   time,
   makePageObject,
 }) => {
-  const name = `foobar-${Date.now().toString(36)}.testing`
+  const label = `foobar-${Date.now().toString(36)}`
+  const name = `${label}.testing`
 
   const homePage = makePageObject('HomePage')
   const transactionModal = makePageObject('TransactionModal')
@@ -33,7 +34,7 @@ test('SNRC: register a .testing name end-to-end', async ({
   await login.connect()
 
   await test.step('search the name and open the registration page', async () => {
-    await homePage.searchInput.fill(name)
+    await homePage.searchInput.fill(label)
     await page.locator(`[data-testid="search-result-name"]`, { hasText: name }).waitFor()
     await page.locator(`[data-testid="search-result-name"]`, { hasText: 'Available' }).waitFor()
     await homePage.searchInput.press('Enter')

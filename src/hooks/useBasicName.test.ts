@@ -1,6 +1,6 @@
 import { mockFunction, renderHook } from '@app/test-utils'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getRegistrationStatus } from '@app/utils/registrationStatus'
 import { createDateAndValue } from '@app/utils/utils'
@@ -547,6 +547,12 @@ describe('useBasicName', () => {
     })
   })
   describe('mocks', () => {
+    beforeAll(() => {
+      process.env.NEXT_PUBLIC_SIMPLEX_TLD = 'eth'
+    })
+    afterAll(() => {
+      delete process.env.NEXT_PUBLIC_SIMPLEX_TLD
+    })
     it.each(mockUseBasicNameTypes)('should return expect value for %s', async (type) => {
       const config = mockUseBasicNameConfig[type]
       const {

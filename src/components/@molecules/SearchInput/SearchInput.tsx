@@ -272,6 +272,7 @@ const getRouteForSearchItem = ({
         priceData,
         addrData,
         supportedTLD: true,
+        name: selectedItem.text,
       })
       if (registrationStatus === 'available') return `/register/${selectedItem.text}`
       // DNS import is disabled in this app — route the "needs import" status
@@ -607,9 +608,11 @@ const useBuildDropdownItems = (inputVal: string, history: HistoryItem[]) => {
 
   const inputIsAddress = useMemo(() => isAddress(inputVal), [inputVal])
 
-  const { isValid, isETH, name } = useValidate({
+  const { isValid, isETH, name, labelCount } = useValidate({
     input: inputVal,
   })
+
+  const isSingleLabel = labelCount <= 1
 
   return useMemo(
     () =>
@@ -620,10 +623,10 @@ const useBuildDropdownItems = (inputVal: string, history: HistoryItem[]) => {
         addAddressItem({ name, inputIsAddress }),
         addTldDropdownItem({ name }),
         addHistoryDropdownItems({ name, history }),
-        addErrorDropdownItem({ name, isValid }),
+        addErrorDropdownItem({ name, isValid: isValid && isSingleLabel }),
         addInfoDropdownItem({ t }),
       ),
-    [inputIsAddress, name, isETH, isValid, history, t],
+    [inputIsAddress, name, isETH, isValid, isSingleLabel, history, t],
   )
 }
 

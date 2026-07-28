@@ -10,6 +10,7 @@ import { ParsedInputResult } from '@ensdomains/ensjs/utils'
 import { getChainsFromUrl } from '@app/constants/chains'
 
 import { emptyAddress } from './constants'
+import { isAppTld } from './utils'
 
 export type RegistrationStatus =
   | 'invalid'
@@ -50,8 +51,10 @@ export const getRegistrationStatus = ({
 }): RegistrationStatus => {
   if (name === '[root]') return 'owned'
 
+  const registrable = !!name && isAppTld(name)
+
   if (isETH && is2LD && isShort) {
-    return 'short'
+    return registrable ? 'short' : 'unsupportedTLD'
   }
 
   if (!ownerData && ownerData !== null && !wrapperData) return 'invalid'
@@ -91,10 +94,10 @@ export const getRegistrationStatus = ({
       }
       const { premium } = priceData || { premium: 0n }
       if (premium > 0n) {
-        return 'premium'
+        return registrable ? 'premium' : 'unsupportedTLD'
       }
     }
-    return 'available'
+    return registrable ? 'available' : 'unsupportedTLD'
   }
   if (ownerData && ownerData.owner !== emptyAddress) {
     if (is2LD) {

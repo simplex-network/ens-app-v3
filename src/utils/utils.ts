@@ -198,6 +198,10 @@ export function isEthLikeTld(name: string): boolean {
   return tld === 'eth' || tld === 'testing' || tld === 'simplex'
 }
 
+export function isAppTld(name: string): boolean {
+  return getTldFromName(name) === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
+}
+
 /*
   Following types are based on this solution: https://stackoverflow.com/questions/53173203/typescript-recursive-function-composition/53175538#53175538
   Best to just move on and not try to understand it. (This is copilot's opintion!)

@@ -1,4 +1,4 @@
-import { ParsedInputResult, parseInput } from '@ensdomains/ensjs/utils'
+import { isEncodedLabelhash, ParsedInputResult, parseInput } from '@ensdomains/ensjs/utils'
 
 import { Prettify } from '@app/types'
 import { tryBeautify } from '@app/utils/beautify'
@@ -21,6 +21,12 @@ const tryDecodeURIComponent = (input: string) => {
   }
 }
 
+const ALLOWED_LABEL_REGEX = /^[a-z0-9-]+$/
+
+const hasOnlyAllowedLabels = (name: string) =>
+  name === '[root]' ||
+  name.split('.').every((label) => ALLOWED_LABEL_REGEX.test(label) || isEncodedLabelhash(label))
+
 export const validate = (input: string) => {
   const decodedInput = tryDecodeURIComponent(input)
   const { normalised: name, ...parsedInput } = parseInput(decodedInput)
@@ -29,6 +35,7 @@ export const validate = (input: string) => {
 
   return {
     ...parsedInput,
+    isValid: parsedInput.isValid && hasOnlyAllowedLabels(outputName),
     name: outputName,
     beautifiedName: tryBeautify(outputName),
     isNonASCII,

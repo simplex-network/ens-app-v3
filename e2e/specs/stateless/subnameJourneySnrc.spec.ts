@@ -61,7 +61,7 @@ test('SNRC: register 2LD + subname (both with simplex.contact), then transfer th
   await login.connect()
 
   await test.step('register the 2LD', async () => {
-    await homePage.searchInput.fill(name)
+    await homePage.searchInput.fill(label)
     await page.locator(`[data-testid="search-result-name"]`, { hasText: name }).waitFor()
     await page.locator(`[data-testid="search-result-name"]`, { hasText: 'Available' }).waitFor()
     await homePage.searchInput.press('Enter')
