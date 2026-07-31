@@ -12,6 +12,8 @@ import { Avatar, lightTheme, Spinner, Tag, Typography } from '@ensdomains/thorin
 
 import { usePrimaryName } from '@app/hooks/ensjs/public/usePrimaryName'
 import { useBasicName } from '@app/hooks/useBasicName'
+import { useControllerLimits } from '@app/hooks/useControllerLimits'
+import { useReservedStatus } from '@app/hooks/useReservedStatus'
 import { useEnsAvatar } from '@app/hooks/useEnsAvatar'
 import { usePrefetchProfile } from '@app/hooks/useProfile'
 import { useZorb } from '@app/hooks/useZorb'
@@ -189,8 +191,30 @@ const PremiumTag = styled(StyledTag)(
   `,
 )
 
-const StatusTag = ({ status }: { status: RegistrationStatus }) => {
+const StatusTag = ({
+  status,
+  minCharLength,
+  isReserved,
+}: {
+  status: RegistrationStatus
+  minCharLength?: number
+  isReserved?: boolean
+}) => {
   const { t } = useTranslation('common')
+  // Reserved trumps any "not currently owned" status: the public can't claim a
+  // reserved label even if ENS would otherwise say `available`, `notImported`,
+  // `notOwned`, `offChain`, or `short`. We don't override when the name is
+  // actually owned (registered/imported/gracePeriod/premium/desynced) — those
+  // outcomes already prevent registration on their own.
+  const isUnownedStatus =
+    status === 'available' ||
+    status === 'notImported' ||
+    status === 'notOwned' ||
+    status === 'offChain' ||
+    status === 'short'
+  if (isReserved && isUnownedStatus) {
+    return <StyledTag colorStyle="redSecondary">Reserved</StyledTag>
+  }
   switch (status) {
     case 'owned':
     case 'imported':
@@ -207,7 +231,11 @@ const StatusTag = ({ status }: { status: RegistrationStatus }) => {
     case 'notImported':
       return <StyledTag colorStyle="blueSecondary">{t(`search.status.${status}`)}</StyledTag>
     case 'short':
-      return <StyledTag colorStyle="redSecondary">{t(`search.status.${status}`)}</StyledTag>
+      return (
+        <StyledTag colorStyle="redSecondary">
+          {minCharLength ? `Min ${minCharLength} chars` : t(`search.status.${status}`)}
+        </StyledTag>
+      )
     case 'desynced':
     case 'desynced:gracePeriod':
       return <StyledTag colorStyle="redSecondary">{t(`search.status.desynced`)}</StyledTag>
@@ -309,6 +337,7 @@ const TldResultItem = ({
     name,
     enabled: !usingPlaceholder,
   })
+  const { minCharLength } = useControllerLimits()
 
   const { avatarUri, avatarIsPlaceholder } = getAvatarUri({ ensAvatar, usingPlaceholder, zorb })
 
@@ -330,7 +359,7 @@ const TldResultItem = ({
         </TextWrapper>
       </LeadingSearchItem>
       {!isLoading && registrationStatus ? (
-        <StatusTag status={registrationStatus} />
+        <StatusTag status={registrationStatus} minCharLength={minCharLength} />
       ) : (
         <SpinnerWrapper>
           <Spinner color="accent" />
@@ -358,6 +387,8 @@ const EthResultItem = ({
     name,
     enabled: !usingPlaceholder,
   })
+  const { minCharLength } = useControllerLimits()
+  const { isReserved } = useReservedStatus({ name: usingPlaceholder ? undefined : name })
 
   const { avatarUri, avatarIsPlaceholder } = getAvatarUri({ ensAvatar, usingPlaceholder, zorb })
 
@@ -383,7 +414,11 @@ const EthResultItem = ({
       {!isLoading &&
       registrationStatus &&
       (registrationStatus !== 'invalid' || !usingPlaceholder) ? (
-        <StatusTag status={registrationStatus} />
+        <StatusTag
+          status={registrationStatus}
+          minCharLength={minCharLength}
+          isReserved={isReserved}
+        />
       ) : (
         <SpinnerWrapper>
           <Spinner color="accent" />

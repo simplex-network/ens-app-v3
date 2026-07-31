@@ -139,7 +139,7 @@ const ProfileTab = ({ nameDetails, name }: Props) => {
             />
           </Helper>
         )}
-        {isWrapped && !normalisedName.endsWith('.eth') && (
+        {isWrapped && !['eth', 'testing', 'simplex'].includes(normalisedName.split('.').pop() || '') && (
           <Helper alert="warning" alignment="horizontal">
             {t('tabs.profile.warnings.wrappedDNS')}
           </Helper>
@@ -159,6 +159,7 @@ const ProfileTab = ({ nameDetails, name }: Props) => {
           key: item.name,
           value: item.value,
         }))}
+        simplexRecords={categorisedRecord.simplex}
         accountRecords={categorisedRecord.accounts}
         otherRecords={categorisedRecord.other}
         verificationRecords={getVerificationRecordItemProps({

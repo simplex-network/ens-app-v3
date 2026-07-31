@@ -1,7 +1,30 @@
+import { parseSimplexUrls } from './parseSimplexUrls'
 import { normaliseTwitterRecordValue } from './records/normaliseTwitterRecordValue'
 
 export const getSocialData = (iconKey: string, value: string) => {
   switch (iconKey) {
+    case 'simplex.contact':
+      return {
+        icon: 'simplex.contact',
+        color: '#0080BC',
+        // Title shown as the record's keyLabel (like "eth address" for coins).
+        label: 'SimpleX Contact',
+        value: 'SimpleX Contact',
+        type: 'link',
+        urlFormatter: parseSimplexUrls(value)[0] ?? value,
+        urls: parseSimplexUrls(value),
+      }
+    case 'simplex.channel':
+      return {
+        icon: 'simplex.channel',
+        color: '#0080BC',
+        // Title shown as the record's keyLabel (like "eth address" for coins).
+        label: 'SimpleX Channel',
+        value: 'SimpleX Channel',
+        type: 'link',
+        urlFormatter: parseSimplexUrls(value)[0] ?? value,
+        urls: parseSimplexUrls(value),
+      }
     case 'twitter':
     case 'com.twitter':
     case 'x':

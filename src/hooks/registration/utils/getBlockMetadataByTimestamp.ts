@@ -33,6 +33,9 @@ export const getBlockMetadataByTimestamp = async (
 ): Promise<GetBlockMetadataByTimestampReturnType> => {
   const data = await fetch(
     `https://api.findblock.xyz/v1/chain/${client.chain.id}/block/after/${timestamp}?inclusive=true`,
+    {
+      signal: AbortSignal.timeout(15_000),
+    },
   ).then((res) => res.json())
   if ('error' in data)
     return {

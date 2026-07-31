@@ -4,10 +4,11 @@ import { getAddress } from 'viem'
 import { truncateFormat } from '@ensdomains/ensjs/utils'
 
 import { getRegistrationStatus } from '@app/utils/registrationStatus'
-import { isLabelTooLong, yearsToSeconds } from '@app/utils/utils'
+import { isEthLikeTld, isLabelTooLong, yearsToSeconds } from '@app/utils/utils'
 
 import { useContractAddress } from './chain/useContractAddress'
 import useCurrentBlockTimestamp from './chain/useCurrentBlockTimestamp'
+import { useControllerLimits } from './useControllerLimits'
 import { useAddressRecord } from './ensjs/public/useAddressRecord'
 import { useExpiry } from './ensjs/public/useExpiry'
 import { useOwner, UseOwnerReturnType } from './ensjs/public/useOwner'
@@ -118,7 +119,7 @@ export const useBasicName = ({
   }, [isTempPremiumDesynced, blockTimestamp])
 
   const isNameAndPublicCallsLoaded = !!name && !publicCallsLoading
-  const registrationStatus = isNameAndPublicCallsLoaded
+  const baseRegistrationStatus = isNameAndPublicCallsLoaded
     ? getRegistrationStatus({
         timestamp: registrationStatusTimestamp,
         validation,
@@ -132,12 +133,36 @@ export const useBasicName = ({
       })
     : undefined
 
+  // Override: if the controller enforces a minimum char length stricter than ENS's default 3,
+  // mark short labels as 'short' so the UI fails early instead of letting the user attempt
+  // a registration that the contract will revert.
+  const { minCharLength, tldSuffix } = useControllerLimits()
+  const labelLen = isETH && is2LD && normalisedName ? normalisedName.split('.')[0].length : Infinity
+  const lengthAdjustedStatus =
+    baseRegistrationStatus === 'available' && minCharLength && labelLen < minCharLength
+      ? ('short' as const)
+      : baseRegistrationStatus
+  // Guard: the controller's on-chain tldSuffix is the source of truth for which TLD this
+  // deployment serves. If it disagrees with the TLD this frontend was built for (stale
+  // NEXT_PUBLIC_SIMPLEX_TLD, wrong deployment addresses), block registration entirely.
+  const tldMismatched =
+    !!tldSuffix && tldSuffix !== `.${process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing'}`
+  const registrationStatus =
+    tldMismatched &&
+    lengthAdjustedStatus &&
+    ['available', 'premium', 'short'].includes(lengthAdjustedStatus)
+      ? ('unsupportedTLD' as const)
+      : lengthAdjustedStatus
+
   const canBeWrapped = useMemo(
     () =>
       !!(
         nameWrapperAddress &&
         !isWrapped &&
-        normalisedName?.endsWith('.eth') &&
+        // Reject the bare TLD itself (`eth`) — only names *within* the TLD
+        // are wrappable. 2LDs and subnames both contain a dot.
+        normalisedName && normalisedName.includes('.') &&
+        isEthLikeTld(normalisedName) &&
         !isLabelTooLong(normalisedName) &&
         !!registrationStatus &&
         ['registered', 'imported', 'owned'].includes(registrationStatus)

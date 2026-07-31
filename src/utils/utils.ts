@@ -159,7 +159,8 @@ export const validateExpiry = ({
   expiry: Date | undefined
   pccExpired?: boolean
 }) => {
-  const isDotETH = checkETH2LDFromName(name)
+  const labels = name.split('.')
+  const isDotETH = labels.length === 2 && ['eth', 'testing', 'simplex'].includes(labels[1])
   if (isDotETH) return expiry
   if (!fuses) return undefined
   return pccExpired || fuses.parent.PARENT_CANNOT_CONTROL ? expiry : undefined
@@ -190,6 +191,11 @@ export function getTldFromName(name: string): string | undefined {
   if (!name) return undefined
   const labels = name.split('.')
   return labels[labels.length - 1]
+}
+
+export function isEthLikeTld(name: string): boolean {
+  const tld = getTldFromName(name)
+  return tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
 }
 
 /*

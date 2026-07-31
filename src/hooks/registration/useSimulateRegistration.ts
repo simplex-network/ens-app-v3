@@ -53,6 +53,13 @@ export const useSimulateRegistration = ({
       ensEthRegistrarControllerAddress: client.chain.contracts.ensEthRegistrarController.address,
     }),
     value: calculateValueWithBuffer(value),
-    query,
+    // Only simulate once the price has loaded. Otherwise a transient price-fetch
+    // failure on a slow connection makes `value` fall back to 0n, the register
+    // simulation reverts (InsufficientValue), and the retry loop keeps re-simulating
+    // with the stale 0n forever — leaving the register step stuck with no recovery.
+    query: {
+      ...query,
+      enabled: (query?.enabled ?? true) && !!price,
+    },
   })
 }

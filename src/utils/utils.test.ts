@@ -85,7 +85,11 @@ describe('formatDateTime', () => {
   it('should format time correctly', () => {
     const date = new Date('2020-01-01T00:00:00.000Z')
     const result = formatDateTime(date)
-    expect(result).toEqual('24:00:00 UTC')
+    // Intl.DateTimeFormat is allowed by Unicode TR35 to render midnight as
+    // either `00:00:00` (h23 cycle, modern) or `24:00:00` (h24 cycle, older
+    // Node). Both are correct; accept either to stay green across CI's Node
+    // versions.
+    expect(result).toMatch(/^(00|24):00:00 UTC$/)
   })
 })
 
@@ -93,7 +97,7 @@ describe('formatFullExpiry', () => {
   it('should format the date and time as expected', () => {
     const expiry = new Date('2020-01-01T00:00:00.000Z')
     const result = formatFullExpiry(expiry)
-    expect(result).toEqual('January 1, 2020, 24:00:00 UTC')
+    expect(result).toMatch(/^January 1, 2020, (00|24):00:00 UTC$/)
   })
   it('should return empty if undefined', () => {
     expect(formatFullExpiry()).toEqual('')
@@ -306,6 +310,20 @@ describe('validateExpiry', () => {
       fuses: { parent: { PARENT_CANNOT_CONTROL: true } } as any,
     })
     expect(result).toEqual(expiry)
+  })
+  it('should return expiry for a 2ld .testing/.simplex name without fuses (no NameWrapper)', () => {
+    const expiry = new Date()
+    expect(validateExpiry({ name: 'test.testing', expiry, fuses: undefined as any })).toEqual(
+      expiry,
+    )
+    expect(validateExpiry({ name: 'test.simplex', expiry, fuses: undefined as any })).toEqual(
+      expiry,
+    )
+  })
+  it('should return undefined for a .testing subname without fuses', () => {
+    const expiry = new Date()
+    const result = validateExpiry({ name: 'sub.test.testing', expiry, fuses: undefined as any })
+    expect(result).toEqual(undefined)
   })
 })
 

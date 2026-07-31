@@ -26,6 +26,10 @@ import { Spacer } from '@app/components/@atoms/Spacer'
 import { ConnectButton } from '@app/components/@molecules/ConnectButton/ConnectButton'
 import { DateSelection } from '@app/components/@molecules/DateSelection/DateSelection'
 import { Card } from '@app/components/Card'
+import { SimplexInfoPanel } from '@app/components/SimplexInfoPanel'
+import { useControllerLimits } from '@app/hooks/useControllerLimits'
+import { useNftGateStatus } from '@app/hooks/useNftGateStatus'
+import { useReservedStatus } from '@app/hooks/useReservedStatus'
 import { useAccountSafely } from '@app/hooks/account/useAccountSafely'
 import { useContractAddress } from '@app/hooks/chain/useContractAddress'
 import { useEstimateFullRegistration } from '@app/hooks/gasEstimation/useEstimateRegistration'
@@ -177,6 +181,11 @@ const OutlinedContainerTitle = styled(Typography)(
   gridAreaStyle,
 )
 
+// SNRC: primary names (reverse records) are unsupported — the deployment has no
+// DefaultReverseRegistrar and the controller reverts on a reverse record. The
+// "set as primary name" toggle is disabled (kept, not deleted, for easy re-enable).
+const SHOW_PRIMARY_NAME = false
+
 const EthInnerCheckbox = ({
   address,
   hasPrimaryName,
@@ -279,7 +288,7 @@ const PaymentChoice = ({
               <Spacer $height="2" />
             </>
           )}
-          {paymentMethodChoice === PaymentMethod.ethereum && hasEnoughEth && (
+          {SHOW_PRIMARY_NAME && paymentMethodChoice === PaymentMethod.ethereum && hasEnoughEth && (
             <>
               <Spacer $height="4" />
               <OutlinedContainer>
@@ -424,8 +433,8 @@ export const ActionButton = (props: ActionButtonProps) => {
           !_props.ethPrice,
       ),
       () => (
-        <Button data-testid="next-button" disabled>
-          {t('loading', { ns: 'common' })}
+        <Button data-testid="next-button" disabled loading>
+          {t('action.next', { ns: 'common' })}
         </Button>
       ),
     )
@@ -509,6 +518,15 @@ const Pricing = ({
   const { data: balance } = useBalance({ address })
   const resolverAddress = useContractAddress({ contract: 'ensPublicResolver' })
   const { data: ethPrice } = useEthPrice()
+  const { required: nftRequired, hasNft } = useNftGateStatus({ address })
+  const blockedByNftGate = nftRequired && hasNft === false
+  const { isReserved } = useReservedStatus({ name })
+  const { minCharLength } = useControllerLimits()
+  const labelLen = name ? name.split('.')[0].length : 0
+  // minCharLength is only enforced on top-level register(); subname creation
+  // bypasses the controller, so the UI gate must too.
+  const isSubname = !!name && name.split('.').length > 2
+  const isTooShort = !!minCharLength && !isSubname && labelLen > 0 && labelLen < minCharLength
 
   const [seconds, setSeconds] = useState(() => registrationData.seconds ?? ONE_YEAR)
   const [durationType, setDurationType] = useState<'date' | 'years'>(
@@ -522,20 +540,32 @@ const Pricing = ({
   const hasPendingMoonpayTransaction = moonpayTransactionStatus === 'pending'
   const hasFailedMoonpayTransaction = moonpayTransactionStatus === 'failed'
 
-  const [paymentMethodChoice, setPaymentMethodChoice] = useState<PaymentMethod>(
-    hasPendingMoonpayTransaction || !balance?.value
-      ? PaymentMethod.moonpay
-      : PaymentMethod.ethereum,
-  )
+  // On the .testing TLD registration is gas-only — hide the credit-card /
+  // Moonpay payment option entirely and pin payment-method state to
+  // ethereum so the Next button isn't trapped in moonpay-default while
+  // balance loads.
+  const isTestingTld = (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing') === 'testing'
 
-  // Keep radio button choice up to date
-  useEffect(() => {
-    setPaymentMethodChoice(
-      hasPendingMoonpayTransaction || hasFailedMoonpayTransaction || !balance?.value
+  const [paymentMethodChoice, setPaymentMethodChoice] = useState<PaymentMethod>(
+    isTestingTld
+      ? PaymentMethod.ethereum
+      : hasPendingMoonpayTransaction || !balance?.value
         ? PaymentMethod.moonpay
         : PaymentMethod.ethereum,
+  )
+
+  // Keep radio button choice up to date. On .testing the credit-card path
+  // is hidden entirely, so pin to ethereum — otherwise the default `moonpay`
+  // (chosen while balance is still loading) leaves the Next button disabled.
+  useEffect(() => {
+    setPaymentMethodChoice(
+      isTestingTld
+        ? PaymentMethod.ethereum
+        : hasPendingMoonpayTransaction || hasFailedMoonpayTransaction || !balance?.value
+          ? PaymentMethod.moonpay
+          : PaymentMethod.ethereum,
     )
-  }, [balance, hasFailedMoonpayTransaction, hasPendingMoonpayTransaction, setPaymentMethodChoice])
+  }, [balance, hasFailedMoonpayTransaction, hasPendingMoonpayTransaction, isTestingTld, setPaymentMethodChoice])
 
   const fullEstimate = useEstimateFullRegistration({
     name,
@@ -551,10 +581,22 @@ const Pricing = ({
 
   const { hasPremium, premiumFee, gasPrice, yearlyFee, totalDurationBasedFee, estimatedGasFee } =
     fullEstimate
-  const durationRequiredBalance = totalDurationBasedFee ? (totalDurationBasedFee * 110n) / 100n : 0n
-  const totalRequiredBalance = durationRequiredBalance
-    ? durationRequiredBalance + (premiumFee || 0n) + (estimatedGasFee || 0n)
-    : 0n
+  // Note: distinguish "fee estimate hasn't returned yet" (undefined) from
+  // "the fee genuinely is zero" (0n, on the free .testing oracle). The
+  // ternary used to gate on `totalDurationBasedFee` itself, which collapsed
+  // free pricing to "loading" forever and left the Next button disabled.
+  // `totalDurationBasedFee` is always bigint (`useEstimateRegistration`
+  // coerces undefined → 0n), so we can't distinguish "still loading" from
+  // "free pricing" by the value alone. The downstream ActionButton matcher
+  // treats `!totalRequiredBalance` as "still loading" and disables Next —
+  // which traps free .testing names because both price AND gas estimate
+  // can resolve to 0n (Hardhat doesn't support state-override-based
+  // eth_estimateGas, so the gas hook can stay at 0n). Floor at 1n so the
+  // matcher recognises the value as "loaded" and enables the button; the
+  // user only pays actual gas.
+  const durationRequiredBalance = (totalDurationBasedFee * 110n) / 100n
+  const totalRequiredBalance =
+    (durationRequiredBalance + (premiumFee || 0n) + (estimatedGasFee || 0n)) || 1n
   const estimatedTotal =
     (totalDurationBasedFee || 0n) + (premiumFee || 0n) + (estimatedGasFee || 0n)
 
@@ -562,7 +604,7 @@ const Pricing = ({
 
   const unsafeDisplayYearlyFee = yearlyFee === 0n ? previousYearlyFee : yearlyFee
 
-  const showPaymentChoice = !isPrimaryLoading && address
+  const showPaymentChoice = !isPrimaryLoading && address && !isTestingTld
 
   const previousEstimatedGasFee = usePreviousDistinct(estimatedGasFee) || 0n
 
@@ -572,6 +614,7 @@ const Pricing = ({
   return (
     <StyledCard>
       <StyledHeading>{t('heading', { name: beautifiedName })}</StyledHeading>
+      <SimplexInfoPanel name={name} address={address} />
       <DateSelection
         {...{ seconds, setSeconds, minSeconds, durationType }}
         onChangeDurationType={setDurationType}
@@ -607,23 +650,37 @@ const Pricing = ({
         />
       )}
       <MobileFullWidth>
-        <ActionButton
-          {...{
-            address,
-            hasPendingMoonpayTransaction,
-            hasFailedMoonpayTransaction,
-            paymentMethodChoice,
-            reverseRecord,
-            callback,
-            initiateMoonpayRegistrationMutation,
-            seconds,
-            balance,
-            totalRequiredBalance,
-            estimatedTotal,
-            ethPrice,
-            durationType,
-          }}
-        />
+        {isReserved ? (
+          <Button data-testid="next-button" disabled>
+            Reserved name
+          </Button>
+        ) : isTooShort ? (
+          <Button data-testid="next-button" disabled>
+            Name too short
+          </Button>
+        ) : blockedByNftGate ? (
+          <Button data-testid="next-button" disabled>
+            SimpleX NFT required
+          </Button>
+        ) : (
+          <ActionButton
+            {...{
+              address,
+              hasPendingMoonpayTransaction,
+              hasFailedMoonpayTransaction,
+              paymentMethodChoice,
+              reverseRecord,
+              callback,
+              initiateMoonpayRegistrationMutation,
+              seconds,
+              balance,
+              totalRequiredBalance,
+              estimatedTotal,
+              ethPrice,
+              durationType,
+            }}
+          />
+        )}
       </MobileFullWidth>
     </StyledCard>
   )

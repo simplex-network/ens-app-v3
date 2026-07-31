@@ -13,19 +13,8 @@ import {
   PersonSVG,
 } from '@ensdomains/thorin'
 
-export type PublicRoute =
-  | 'search'
-  | 'governance'
-  | 'blog'
-  | 'developers'
-  | 'support'
-  | 'bounty'
-  | 'terms'
-  | 'privacy'
-  | 'oldApp'
-  | 'ipfsApp'
-  | 'feedback'
-export type ConnectedRoute = 'names' | 'profile' | 'favourites' | 'settings'
+export type PublicRoute = 'search' | 'consortium'
+export type ConnectedRoute = 'names' | 'profile' | 'favourites' | 'settings' | 'admin'
 export type AnyRoute = PublicRoute | ConnectedRoute | 'unknown'
 
 export type RouteItemObj = {
@@ -100,77 +89,23 @@ export const routes: RouteItemObj[] = [
     onlyDropdown: true,
   },
   {
-    name: 'support',
-    href: 'https://support.ens.domains',
-    label: 'navigation.support',
+    name: 'admin',
+    href: '/admin',
+    label: 'Admin',
     disabled: false,
-    connected: false,
-  },
-  {
-    name: 'feedback',
-    href: 'https://enslabs.notion.site/20d7a8b1f0ed81feb54dfa19917e6acb?pvs=105',
-    label: 'navigation.feedback',
-    disabled: false,
-    connected: false,
+    connected: true,
+    icon: {
+      inactive: CogSVG,
+      active: CogActiveSVG,
+    },
     onlyDropdown: true,
   },
   {
-    name: 'governance',
-    href: 'https://ensdao.org/',
-    label: 'navigation.governance',
+    name: 'consortium',
+    href: 'https://simplexnetwork.org/',
+    label: 'navigation.consortium',
     disabled: false,
     connected: false,
-  },
-  {
-    name: 'blog',
-    href: 'https://blog.ens.domains',
-    label: 'navigation.blog',
-    disabled: false,
-    connected: false,
-  },
-  {
-    name: 'developers',
-    href: 'https://docs.ens.domains/',
-    label: 'navigation.developers',
-    disabled: false,
-    connected: false,
-  },
-  {
-    name: 'bounty',
-    href: 'https://docs.ens.domains/bugs#-bug-bounty-program',
-    label: 'navigation.bounty',
-    disabled: false,
-    connected: false,
-  },
-  {
-    name: 'terms',
-    href: 'https://ens.domains/legal/terms-of-use',
-    label: 'navigation.terms',
-    disabled: false,
-    connected: false,
-  },
-  {
-    name: 'privacy',
-    href: 'https://ens.domains/legal/privacy-policy',
-    label: 'navigation.privacy',
-    disabled: false,
-    connected: false,
-  },
-  {
-    name: 'oldApp',
-    href: 'https://legacy.ens.domains',
-    label: 'navigation.oldApp',
-    disabled: false,
-    connected: false,
-    onlyDropdown: true,
-  },
-  {
-    name: 'ipfsApp',
-    href: 'https://app.ens.eth.limo/',
-    label: 'navigation.ipfsApp',
-    disabled: false,
-    connected: false,
-    onlyDropdown: true,
   },
 ]
 
@@ -178,7 +113,7 @@ export const legacyFavouritesRoute: RouteItemObj = {
   name: 'favourites',
   href: '/legacyfavourites',
   label: 'navigation.favourites',
-  disabled: false,
+  disabled: true,
   connected: false,
   icon: {
     inactive: HeartSVG,
