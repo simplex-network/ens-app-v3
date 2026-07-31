@@ -22,6 +22,47 @@ describe('useValidate', () => {
     const { result } = renderHook(() => useValidate({ input: '%' }))
     expect(result.current.isValid).toEqual(false)
   })
+  it('should return isValid as false for non-latin characters', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'дом.testing' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as false for emoji', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'name❤️' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as false for punctuation ENS normalisation permits', async () => {
+    const { result } = renderHook(() => useValidate({ input: '_underscore' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as false for a leading hyphen', async () => {
+    const { result } = renderHook(() => useValidate({ input: '-foobar.testing' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as false for a trailing hyphen', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'foobar-.testing' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as false for Punycode-style hyphens in positions 3-4', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'xn--nxasmq6b.testing' }))
+    expect(result.current.isValid).toEqual(false)
+  })
+  it('should return isValid as true for a hyphen pair outside positions 3-4', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'a--b.testing' }))
+    expect(result.current.isValid).toEqual(true)
+  })
+  it('should return isValid as true for labels of letters, digits and hyphens', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'foo-1.testing' }))
+    expect(result.current.isValid).toEqual(true)
+  })
+  it('should accept uppercase input because normalisation lowercases it', async () => {
+    const { result } = renderHook(() => useValidate({ input: 'FOO' }))
+    expect(result.current.isValid).toEqual(true)
+    expect(result.current.name).toEqual('foo')
+  })
+  it('should keep encoded labelhashes valid', async () => {
+    const { result } = renderHook(() => useValidate({ input: `[${'ab'.repeat(32)}].testing` }))
+    expect(result.current.isValid).toEqual(true)
+  })
   it('should cache the result for the same input', () => {
     const { result, rerender } = renderHook(({ input }) => useValidate({ input }), {
       initialProps: { input: 'test' },
