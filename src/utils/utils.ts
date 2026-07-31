@@ -195,7 +195,7 @@ export function getTldFromName(name: string): string | undefined {
 
 export function isEthLikeTld(name: string): boolean {
   const tld = getTldFromName(name)
-  return tld === 'eth' || tld === 'testing' || tld === 'simplex'
+  return tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
 }
 
 /*

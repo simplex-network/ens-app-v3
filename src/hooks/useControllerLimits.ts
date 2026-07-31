@@ -25,6 +25,13 @@ const controllerAbi = [
     stateMutability: 'view',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'tldSuffix',
+    outputs: [{ type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const
 
 export const useControllerLimits = () => {
@@ -41,6 +48,7 @@ export const useControllerLimits = () => {
           { address: controllerAddress!, abi: controllerAbi, functionName: 'minCharLength' },
           { address: controllerAddress!, abi: controllerAbi, functionName: 'nftGateEnabled' },
           { address: controllerAddress!, abi: controllerAbi, functionName: 'smpxNft' },
+          { address: controllerAddress!, abi: controllerAbi, functionName: 'tldSuffix' },
         ]
       : [],
     query: { enabled, staleTime: 60_000 },
@@ -51,5 +59,6 @@ export const useControllerLimits = () => {
     minCharLength: data?.[0]?.status === 'success' ? Number(data[0].result as number) : undefined,
     nftGateEnabled: data?.[1]?.status === 'success' ? (data[1].result as boolean) : undefined,
     smpxNft: data?.[2]?.status === 'success' ? (data[2].result as Address) : undefined,
+    tldSuffix: data?.[3]?.status === 'success' ? (data[3].result as string) : undefined,
   }
 }
