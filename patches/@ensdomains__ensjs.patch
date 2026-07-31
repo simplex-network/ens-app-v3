@@ -8,7 +8,7 @@ index 6c23cac5dbf0f99bebac7cc7f6c2fb0a2ad59d6e..a30d0268f13ecd362491f03ae79c4c47
      // check for only .eth names
 -    if (labels[labels.length - 1] === 'eth') {
 +    const tld = labels[labels.length - 1];
-+    if (tld === 'eth' || tld === 'testing' || tld === 'simplex') {
++    if (tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')) {
          // if the owner on the registrar is the namewrapper, then the namewrapper owner is the owner
          // there is no "registrant" for wrapped names
          if (registrarOwner === nameWrapperAddress) {
@@ -52,7 +52,7 @@ index 76b725c3f43ad25c66ba5f2d1af3c0b363682c3b..3b1cab8d413817f9cc4b8b0b0fbe0ce2
      const labels = name.split('.');
 -    const isDotEth = labels[labels.length - 1] === 'eth';
 +    const tld = labels[labels.length - 1];
-+    const isDotEth = tld === 'eth' || tld === 'testing' || tld === 'simplex';
++    const isDotEth = tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing');
      if (labels.length === 0)
          return 'root';
      if (labels.length === 1) {
@@ -65,7 +65,7 @@ index 7b2b2164b9aa9e4363f1449883af670bd33efea1..567ab70703086ada36e3abe5a21c499d
      const labels = nameReference.split('.');
      const tld = labels[labels.length - 1];
 -    const isETH = tld === 'eth';
-+    const isETH = tld === 'eth' || tld === 'testing' || tld === 'simplex';
++    const isETH = tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing');
      const labelDataArray = split(nameReference);
      const isShort = (labelDataArray[0].output?.length || 0) < MINIMUM_DOT_ETH_CHARS;
      if (labels.length === 1) {
@@ -74,7 +74,7 @@ index 7b2b2164b9aa9e4363f1449883af670bd33efea1..567ab70703086ada36e3abe5a21c499d
      };
  };
 -export const checkIsDotEth = (labels) => labels.length === 2 && labels[1] === 'eth';
-+export const checkIsDotEth = (labels) => labels.length === 2 && (labels[1] === 'eth' || labels[1] === 'testing' || labels[1] === 'simplex');
++export const checkIsDotEth = (labels) => labels.length === 2 && labels[1] === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing');
  //# sourceMappingURL=validation.js.map
 diff --git a/src/functions/public/getOwner.ts b/src/functions/public/getOwner.ts
 index b3b572f4dd64e411143d85fc113d755d1f5788c8..1ce1cacf51ebe2f45780711e46840d77a25a0168 100644
@@ -86,7 +86,7 @@ index b3b572f4dd64e411143d85fc113d755d1f5788c8..1ce1cacf51ebe2f45780711e46840d77
    // check for only .eth names
 -  if (labels[labels.length - 1] === 'eth') {
 +  const tld = labels[labels.length - 1]
-+  if (tld === 'eth' || tld === 'testing' || tld === 'simplex') {
++  if (tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')) {
      // if the owner on the registrar is the namewrapper, then the namewrapper owner is the owner
      // there is no "registrant" for wrapped names
      if (registrarOwner === nameWrapperAddress) {
@@ -130,7 +130,7 @@ index ae761486e270c8f899d6ea1e62731a5116452638..833261c8ebcaa4258561c3946cb0d436
    const labels = name.split('.')
 -  const isDotEth = labels[labels.length - 1] === 'eth'
 +  const tld = labels[labels.length - 1]
-+  const isDotEth = tld === 'eth' || tld === 'testing' || tld === 'simplex'
++  const isDotEth = tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
  
    if (labels.length === 0) return 'root'
    if (labels.length === 1) {
@@ -143,7 +143,7 @@ index e1e75d900afee29c8e18d78141234f2e512a9abf..4937757f25695fc8721780cc9ea5b262
    const labels = nameReference.split('.')
    const tld = labels[labels.length - 1]
 -  const isETH = tld === 'eth'
-+  const isETH = tld === 'eth' || tld === 'testing' || tld === 'simplex'
++  const isETH = tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
    const labelDataArray = split(nameReference)
    const isShort =
      (labelDataArray[0].output?.length || 0) < MINIMUM_DOT_ETH_CHARS
@@ -154,4 +154,4 @@ index e1e75d900afee29c8e18d78141234f2e512a9abf..4937757f25695fc8721780cc9ea5b262
 -export const checkIsDotEth = (labels: string[]) =>
 -  labels.length === 2 && labels[1] === 'eth'
 +export const checkIsDotEth = (labels: string[]): boolean =>
-+  labels.length === 2 && (labels[1] === 'eth' || labels[1] === 'testing' || labels[1] === 'simplex')
++  labels.length === 2 && labels[1] === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')

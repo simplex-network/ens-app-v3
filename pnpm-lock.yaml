@@ -116,7 +116,7 @@ patchedDependencies:
     hash: b597d2dae9a4a8d52bd7729b3a106b767b262d1014e17b17537bdac1edf9468b
     path: patches/@ensdomains__ens-test-env@1.0.1.patch
   '@ensdomains/ensjs':
-    hash: 01f8355f60e42184a18ee2bddd178fb14b872db58eb68e3ca273128e5843ebfd
+    hash: b9de2454ddc642824a53d568667dc1f9e2420cac8a067c8ef1eea254aa099e1a
     path: patches/@ensdomains__ensjs.patch
   '@nomicfoundation/hardhat-viem@2.0.3':
     hash: a959a4ffb0cc64cf976094f071be14daec8caf74f0df0696d631155b0121ed4a
@@ -155,7 +155,7 @@ importers:
         version: 1.0.1(patch_hash=b597d2dae9a4a8d52bd7729b3a106b767b262d1014e17b17537bdac1edf9468b)
       '@ensdomains/ensjs':
         specifier: ^4.2.2
-        version: 4.2.2(patch_hash=01f8355f60e42184a18ee2bddd178fb14b872db58eb68e3ca273128e5843ebfd)(typescript@5.7.3)(viem@2.19.4(patch_hash=459ff6674e27f2eb2b856948748da6c10623d32d4bbda67b2f2635ac46351dff)(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.75))(zod@3.25.75)
+        version: 4.2.2(patch_hash=b9de2454ddc642824a53d568667dc1f9e2420cac8a067c8ef1eea254aa099e1a)(typescript@5.7.3)(viem@2.19.4(patch_hash=459ff6674e27f2eb2b856948748da6c10623d32d4bbda67b2f2635ac46351dff)(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.75))(zod@3.25.75)
       '@ensdomains/thorin':
         specifier: 1.0.0-beta.28
         version: 1.0.0-beta.28(@vanilla-extract/css@1.15.5(babel-plugin-macros@3.1.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -10024,7 +10024,7 @@ snapshots:
       - bare-buffer
       - debug
 
-  '@ensdomains/ensjs@4.2.2(patch_hash=01f8355f60e42184a18ee2bddd178fb14b872db58eb68e3ca273128e5843ebfd)(typescript@5.7.3)(viem@2.19.4(patch_hash=459ff6674e27f2eb2b856948748da6c10623d32d4bbda67b2f2635ac46351dff)(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.75))(zod@3.25.75)':
+  '@ensdomains/ensjs@4.2.2(patch_hash=b9de2454ddc642824a53d568667dc1f9e2420cac8a067c8ef1eea254aa099e1a)(typescript@5.7.3)(viem@2.19.4(patch_hash=459ff6674e27f2eb2b856948748da6c10623d32d4bbda67b2f2635ac46351dff)(bufferutil@4.0.9)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.75))(zod@3.25.75)':
     dependencies:
       '@adraffy/ens-normalize': 1.10.1
       '@ensdomains/address-encoder': 1.1.4
