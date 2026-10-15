@@ -1,7 +1,15 @@
 import { QueryFunctionContext } from '@tanstack/react-query'
 import { CallParameters, getFeeHistory, SendTransactionReturnType } from '@wagmi/core'
 import { Dispatch } from 'react'
-import { Hash, PrepareTransactionRequestRequest, toHex, Transaction } from 'viem'
+import {
+  BaseError,
+  Hash,
+  HttpRequestError,
+  PrepareTransactionRequestRequest,
+  TimeoutError,
+  toHex,
+  Transaction,
+} from 'viem'
 import { call, estimateGas, getTransaction, prepareTransactionRequest } from 'viem/actions'
 import { useConnections } from 'wagmi'
 
@@ -270,9 +278,21 @@ export const createTransactionRequestQueryFn =
         error: null,
       }
     } catch (e) {
+      const error = e as Error
+      // Re-throw transport/network failures so TanStack Query retries them — on a slow
+      // or flaky link a timed-out gas estimation would otherwise be cached as a
+      // "successful" query with an embedded error, leaving the confirm button dead
+      // until the next block/refetch. Genuine execution/revert errors stay embedded so
+      // they surface immediately without pointless retries.
+      if (
+        error instanceof BaseError &&
+        !!error.walk((x) => x instanceof HttpRequestError || x instanceof TimeoutError)
+      ) {
+        throw error
+      }
       return {
         data: null,
-        error: e as Error,
+        error,
       }
     }
   }

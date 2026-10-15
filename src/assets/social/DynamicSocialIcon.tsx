@@ -5,6 +5,8 @@ import { SVGProps } from 'react'
 import { QuestionCircleSVG } from '@ensdomains/thorin'
 
 export const socialIconTypes = {
+  'simplex.contact': dynamic(() => import('./SocialSimplex.svg')),
+  'simplex.channel': dynamic(() => import('./SocialSimplex.svg')),
   'com.discord': dynamic(() => import('./SocialDiscord.svg')),
   'com.discourse': dynamic(() => import('./SocialDiscourseColour.svg')),
   'com.github': dynamic(() => import('./SocialGithub.svg')),
@@ -17,6 +19,8 @@ export const socialIconTypes = {
 }
 
 export const socialIconColors = {
+  'simplex.contact': '#0197FF',
+  'simplex.channel': '#0197FF',
   'com.discord': '#5A57DD',
   'com.discourse': undefined,
   'com.github': '#000000',

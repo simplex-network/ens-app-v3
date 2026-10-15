@@ -11,6 +11,7 @@ import { ProfileSnippet } from '@app/components/ProfileSnippet'
 import { VERIFICATION_RECORD_KEY } from '@app/constants/verification'
 import { useAbilities } from '@app/hooks/abilities/useAbilities'
 import { useIsOffchainName } from '@app/hooks/ensjs/dns/useIsOffchainName'
+import { hasValidPrimaryName } from '@app/hooks/ensjs/public/primaryNameUtils'
 import { usePrimaryName } from '@app/hooks/ensjs/public/usePrimaryName'
 import { useProfileActions } from '@app/hooks/pages/profile/[name]/profile/useProfileActions/useProfileActions'
 import { useNameDetails } from '@app/hooks/useNameDetails'
@@ -110,7 +111,7 @@ const ProfileTab = ({ nameDetails, name }: Props) => {
         name={normalisedName}
         getTextRecord={getTextRecord}
         button={snippetButton}
-        isPrimary={name === primaryData?.name}
+        isPrimary={hasValidPrimaryName(primaryData) && name === primaryData?.name}
         isVerified={verifiedData?.some(({ key, verified }) => key === 'personhood' && verified)}
       >
         {isOffchainImport && (
@@ -139,7 +140,7 @@ const ProfileTab = ({ nameDetails, name }: Props) => {
             />
           </Helper>
         )}
-        {isWrapped && !normalisedName.endsWith('.eth') && (
+        {isWrapped && !['eth', 'testing', 'simplex'].includes(normalisedName.split('.').pop() || '') && (
           <Helper alert="warning" alignment="horizontal">
             {t('tabs.profile.warnings.wrappedDNS')}
           </Helper>
@@ -159,6 +160,7 @@ const ProfileTab = ({ nameDetails, name }: Props) => {
           key: item.name,
           value: item.value,
         }))}
+        simplexRecords={categorisedRecord.simplex}
         accountRecords={categorisedRecord.accounts}
         otherRecords={categorisedRecord.other}
         verificationRecords={getVerificationRecordItemProps({

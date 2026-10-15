@@ -170,6 +170,7 @@ const UploadComponent = ({
         trailing={
           <Button
             disabled={isPending}
+            loading={isPending}
             colorStyle={error ? 'redSecondary' : undefined}
             onClick={() => signAndUpload()}
             data-testid="upload-button"

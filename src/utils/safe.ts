@@ -94,15 +94,19 @@ export const fetchTxFromSafeTxHash = async ({
   chainId: number
   safeTxHash: Hash
 }): Promise<{ transactionHash: Hash } | null> => {
-  const data: SafeResponse = await fetch(
-    `${SAFE_ENDPOINT}/v1/chains/${chainId}/transactions/${safeTxHash}`,
-    {
+  let data: SafeResponse
+  try {
+    data = await fetch(`${SAFE_ENDPOINT}/v1/chains/${chainId}/transactions/${safeTxHash}`, {
       method: 'GET',
       headers: {
         accept: 'application/json',
       },
-    },
-  ).then((res) => res.json())
+      signal: AbortSignal.timeout(15_000),
+    }).then((res) => res.json())
+  } catch (e) {
+    console.error(e)
+    return null
+  }
 
   // error
   if ('code' in data) {

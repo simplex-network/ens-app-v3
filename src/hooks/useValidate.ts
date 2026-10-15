@@ -1,4 +1,4 @@
-import { ParsedInputResult, parseInput } from '@ensdomains/ensjs/utils'
+import { isEncodedLabelhash, ParsedInputResult, parseInput } from '@ensdomains/ensjs/utils'
 
 import { Prettify } from '@app/types'
 import { tryBeautify } from '@app/utils/beautify'
@@ -21,6 +21,15 @@ const tryDecodeURIComponent = (input: string) => {
   }
 }
 
+// RFC 1123 hostname labels (strict LDH): a-z, 0-9 and hyphen, no leading or
+// trailing hyphen, and no '--' in positions 3-4 (reserved for Punycode
+// 'xn--' labels, which could IDNA-decode back to the Unicode this blocks).
+const ALLOWED_LABEL_REGEX = /^(?!.{2}--)[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
+
+const hasOnlyAllowedLabels = (name: string) =>
+  name === '[root]' ||
+  name.split('.').every((label) => ALLOWED_LABEL_REGEX.test(label) || isEncodedLabelhash(label))
+
 export const validate = (input: string) => {
   const decodedInput = tryDecodeURIComponent(input)
   const { normalised: name, ...parsedInput } = parseInput(decodedInput)
@@ -29,6 +38,7 @@ export const validate = (input: string) => {
 
   return {
     ...parsedInput,
+    isValid: parsedInput.isValid && hasOnlyAllowedLabels(outputName),
     name: outputName,
     beautifiedName: tryBeautify(outputName),
     isNonASCII,

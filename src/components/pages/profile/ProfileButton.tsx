@@ -25,6 +25,10 @@ import { VerificationBadgeVerifierTooltipContent } from '@app/components/@molecu
 import { VerificationBadge } from '@app/components/@molecules/VerificationBadge/VerificationBadge'
 import { useBlockExplorer } from '@app/hooks/chain/useBlockExplorer'
 import { useCoinChain } from '@app/hooks/chain/useCoinChain'
+import {
+  getPrimaryDisplayName,
+  hasValidPrimaryName,
+} from '@app/hooks/ensjs/public/primaryNameUtils'
 import { usePrimaryName } from '@app/hooks/ensjs/public/usePrimaryName'
 import { useRouterWithHistory } from '@app/hooks/useRouterWithHistory'
 import { getDestinationAsHref } from '@app/routes'
@@ -91,6 +95,60 @@ export const SocialProfileButton = ({
   )
 
   if (!socialData) return null
+
+  // SimpleX records (`simplex.contact` / `simplex.channel`) get a title via
+  // `keyLabel` — the equivalent of "eth address" on coin records — and show the
+  // SMP-server host as the value, linking out to the full URL. Other socials are
+  // unchanged.
+  const isSimplex = 'urls' in socialData
+  const simplexUrl = 'urls' in socialData ? socialData.urlFormatter : undefined
+  const simplexHost = (() => {
+    if (!simplexUrl) return undefined
+    try {
+      return new URL(simplexUrl).host
+    } catch {
+      return simplexUrl
+    }
+  })()
+  const keyLabel = isSimplex ? socialData.label : undefined
+
+  // For social records that carry a list of URLs (`simplex.contact` /
+  // `simplex.channel`) with two or more entries, expand the card into a
+  // dropdown listing each URL as its own clickable item — primary first,
+  // fallbacks after. A single-URL list falls through to the plain `<a>`
+  // render below so the common case stays one-click.
+  const urls = 'urls' in socialData ? socialData.urls : undefined
+  if (urls && urls.length > 1) {
+    const items: DropdownItem[] = urls.map((url, index) => ({
+      icon: UpRightArrowIcon,
+      label: `Server ${index + 1}`,
+      onClick: () => window.open(url, '_blank', 'noopener,noreferrer'),
+    }))
+    return (
+      <VerificationBadge
+        isVerified={isVerified}
+        showBadge={isVerified}
+        type="record"
+        tooltipContent={<VerificationBadgeAccountTooltipContent verifiers={verifiers} />}
+      >
+        <Dropdown width={200} items={items} direction="up">
+          <RecordItem
+            icon={IconComponent}
+            postfixIcon={VerticalDotsSVG}
+            size={breakpoints.sm ? 'large' : 'small'}
+            inline
+            as="button"
+            keyLabel={keyLabel}
+            data-testid={`social-profile-button-${iconKey}`}
+            value={socialData.value}
+          >
+            {socialData.value}
+          </RecordItem>
+        </Dropdown>
+      </VerificationBadge>
+    )
+  }
+
   return (
     <VerificationBadge
       isVerified={isVerified}
@@ -102,13 +160,14 @@ export const SocialProfileButton = ({
         icon={IconComponent}
         size={breakpoints.sm ? 'large' : 'small'}
         inline
+        keyLabel={keyLabel}
         data-testid={`social-profile-button-${iconKey}`}
-        value={socialData.value}
+        value={simplexUrl ?? socialData.value}
         {...(socialData.type === 'link'
           ? { as: 'a' as const, link: socialData.urlFormatter }
           : { as: 'button' as const })}
       >
-        {socialData.value}
+        {simplexHost ?? socialData.value}
       </RecordItem>
     </VerificationBadge>
   )
@@ -310,6 +369,8 @@ export const OwnerProfileButton = ({
     address: addressOrNameOrDate as Address,
     enabled: dataType === 'address',
   })
+  const primaryDisplayName = getPrimaryDisplayName(primary.data)
+  const hasPrimaryName = hasValidPrimaryName(primary.data)
 
   const { link, ...recordItemPartialProps } = useMemo(() => {
     const base = {
@@ -341,11 +402,11 @@ export const OwnerProfileButton = ({
     if (dataType === 'address')
       return {
         ...base,
-        link: primary.data?.name
+        link: hasPrimaryName
           ? getDestinationAsHref(createUrlObject(`/profile/${primary.data?.name}`, { referrer }))
           : getDestinationAsHref(createUrlObject(`/address/${addressOrNameOrDate}`, { referrer })),
         children:
-          primary.data?.beautifiedName ||
+          primaryDisplayName ||
           (breakpoints.sm ? shortenAddress(addressOrNameOrDate) : addressOrNameOrDate.slice(0, 5)),
       } as const
     return {
@@ -358,8 +419,9 @@ export const OwnerProfileButton = ({
     addressOrNameOrDate,
     label,
     breakpoints,
+    hasPrimaryName,
     primary.data?.name,
-    primary.data?.beautifiedName,
+    primaryDisplayName,
     referrer,
     t,
   ])
@@ -374,7 +436,7 @@ export const OwnerProfileButton = ({
           onClick: () => router.push(link),
         }
       : undefined,
-    primary.data?.name
+    hasPrimaryName
       ? {
           icon: CopyIcon,
           label: 'Copy name',
