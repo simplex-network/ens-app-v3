@@ -23,7 +23,7 @@ import { Content } from '@app/layouts/Content'
 import { useTransactionFlow } from '@app/transaction-flow/TransactionFlowProvider'
 import { sendEvent } from '@app/utils/analytics/events'
 import { getReferrerHex } from '@app/utils/referrer'
-import { isLabelTooLong, secondsToYears } from '@app/utils/utils'
+import { isLabelTooLong, pageTitle, secondsToYears } from '@app/utils/utils'
 
 import RegistrationDisabledBanner from './RegistrationDisabledBanner'
 import Complete from './steps/Complete'
@@ -309,7 +309,7 @@ const Registration = ({ nameDetails, isLoading }: Props) => {
   return (
     <>
       <Head>
-        <title>{t('title', { name: beautifiedName })}</title>
+        <title>{pageTitle(t('title', { name: beautifiedName }))}</title>
       </Head>
       <Content
         noTitle

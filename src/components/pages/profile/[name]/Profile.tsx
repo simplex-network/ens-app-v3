@@ -19,7 +19,7 @@ import { useRouterWithHistory } from '@app/hooks/useRouterWithHistory'
 import { Content, ContentWarning } from '@app/layouts/Content'
 import { OG_IMAGE_URL } from '@app/utils/constants'
 import { shouldRedirect } from '@app/utils/shouldRedirect'
-import { formatFullExpiry, makeEtherscanLink } from '@app/utils/utils'
+import { formatFullExpiry, makeEtherscanLink, pageTitle } from '@app/utils/utils'
 
 import { ProfileEmptyBanner } from './ProfileEmptyBanner'
 import MoreTab from './tabs/MoreTab/MoreTab'
@@ -233,7 +233,7 @@ const ProfileContent = ({ isSelf, isLoading: parentIsLoading, name }: Props) => 
   return (
     <>
       <Head>
-        <title>{titleContent}</title>
+        <title>{pageTitle(titleContent)}</title>
         <meta name="description" content={descriptionContent} />
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:title" content={titleContent} />
