@@ -1,16 +1,14 @@
 import { useRouter } from 'next/router'
 import { ReactNode, useCallback, useEffect, useRef } from 'react'
 import useTransition, { TransitionState } from 'react-transition-state'
-import styled, { css, useTheme } from 'styled-components'
+import styled, { css, DefaultTheme, useTheme } from 'styled-components'
 import { useAccount } from 'wagmi'
+
 
 import { useRecentTransactions } from '@app/hooks/transactions/useRecentTransactions'
 import { useInitial } from '@app/hooks/useInitial'
 import { legacyFavouritesRoute, routes } from '@app/routes'
 import { useBreakpoint } from '@app/utils/BreakpointProvider'
-
-import ENSFull from '../assets/ENSFull.svg'
-import ENSWithGradient from '../assets/ENSWithGradient.svg'
 import BaseLink from './@atoms/BaseLink'
 import { RouteItem } from './@atoms/RouteItem/RouteItem'
 import { HeaderConnect } from './@molecules/ConnectButton/ConnectButton'
@@ -127,7 +125,14 @@ const routesNoSearch = routes.filter(
 )
 
 export const Header = () => {
-  const { space } = useTheme()
+  const theme = useTheme() as DefaultTheme & { mode?: 'light' | 'dark' }
+  // The Thorin theme object is what's passed to styled-components'
+  // ThemeProvider in `_app.tsx` (and in `test-utils.tsx`), so the same
+  // hook gives us both styled-components tokens and Thorin's `mode`.
+  // Reading via styled-components avoids depending on Thorin's separate
+  // ThemeProvider, which the test fixtures don't wrap in.
+  const { space } = theme
+  const logoSrc = theme.mode === 'dark' ? '/simplex-logo-dark.png' : '/simplex-logo-light.png'
   const router = useRouter()
   const isInitial = useInitial()
   const { isConnected } = useAccount()
@@ -202,11 +207,11 @@ export const Header = () => {
             </BaseLink>
           )}
         >
-          {pathnameWithoutQuery === '/' ? (
-            <ENSFull height={space['12']} />
-          ) : (
-            <ENSWithGradient height={space['12']} />
-          )}
+          <img
+            src={logoSrc}
+            alt="SimpleX"
+            style={{ height: space['12'], width: 'auto', display: 'block' }}
+          />
         </ConditionalWrapper>
         {pathnameWithoutQuery !== '/' && breakpoints.sm && (
           <>

@@ -117,6 +117,13 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       subgraphClient.request<GraphResponse>(query).then((res) => {
         return res!._meta.block.number
       }),
+    // No subgraph: the query is disabled (enabled: false) and never polls. Keep
+    // the upstream `0` sentinel — the no-subgraph sync UI is already suppressed by
+    // the useGraphOutOfSync / useHasGraphError bypasses below (gated on
+    // NEXT_PUBLIC_PROVIDER). Do NOT use a large sentinel here: a truthy
+    // currentGraphBlock makes the graph-block reset effect's guard (below)
+    // permanently satisfied, looping queryClient invalidation and making the
+    // post-registration "complete" screen reload endlessly.
     initialData: 0,
     refetchInterval: (q) => {
       if (hasSubgraphSyncErrors.error) return false
@@ -127,10 +134,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return false
     },
-    enabled:
-      !!subgraphClient &&
-      !!transactions.find((x) => x.minedData?.blockNumber) &&
-      !hasSubgraphSyncErrors.error,
+    enabled: false,
   })
 
   // reset getSubnames and graph queries when the graph block is updated
@@ -222,16 +226,45 @@ export const useCallbackOnTransaction = (callback: UpdateCallback) => {
 
 export const useGraphOutOfSync = () => {
   const { isOutOfSync } = useContext(Context)
+  // Same bypass as useHasGraphError / useGraphErrorType: local dev and the
+  // Sepolia custom deployment have no subgraph, so there is nothing to be
+  // out of sync with. Suppress the hamburger-menu spinner + warning.
+  if (
+    typeof window !== 'undefined' &&
+    (process.env.NEXT_PUBLIC_PROVIDER || process.env.NEXT_PUBLIC_SEPOLIA_DEPLOYMENT_ADDRESSES || process.env.NEXT_PUBLIC_MAINNET_DEPLOYMENT_ADDRESSES)
+  ) {
+    return false
+  }
   return !!isOutOfSync
 }
 
 export const useHasGraphError = () => {
   const { isFetching, isError } = useContext(Context)
+  // Local dev (NEXT_PUBLIC_PROVIDER) and our Sepolia deployment
+  // (NEXT_PUBLIC_SEPOLIA_DEPLOYMENT_ADDRESSES) both run against custom contract
+  // addresses that the public ENS subgraph doesn't index. Treat the resulting
+  // error state as "no error" so subgraph-gated UI (e.g. Edit profile) stays
+  // enabled.
+  if (
+    typeof window !== 'undefined' &&
+    (process.env.NEXT_PUBLIC_PROVIDER || process.env.NEXT_PUBLIC_SEPOLIA_DEPLOYMENT_ADDRESSES || process.env.NEXT_PUBLIC_MAINNET_DEPLOYMENT_ADDRESSES)
+  ) {
+    return { data: false, isLoading: false }
+  }
   return { data: isError, isLoading: isFetching }
 }
 
 export const useGraphErrorType = () => {
   const context = useContext(Context)
+  // Same bypass as useHasGraphError: local dev and the Sepolia custom
+  // deployment have no subgraph, so suppress the banner instead of crying
+  // wolf for a known-and-intentional missing dependency.
+  if (
+    typeof window !== 'undefined' &&
+    (process.env.NEXT_PUBLIC_PROVIDER || process.env.NEXT_PUBLIC_SEPOLIA_DEPLOYMENT_ADDRESSES || process.env.NEXT_PUBLIC_MAINNET_DEPLOYMENT_ADDRESSES)
+  ) {
+    return null
+  }
   if (context.isError) return 'SubgraphError'
   if (context.isSlow) return 'SubgraphLatency'
   if (context.isOutOfSync) return 'SubgraphOutOfSync'

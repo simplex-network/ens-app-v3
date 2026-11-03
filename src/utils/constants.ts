@@ -9,7 +9,10 @@ export const MOONPAY_WORKER_URL: { [key: number]: string } = {
 
 export const FAUCET_WORKER_URL = 'https://ens-faucet.ens-cf.workers.dev'
 
-export const WC_PROJECT_ID = '9b14144d470af1e03ab9d88aaa127332'
+// SNRC: WalletConnect/Reown project owned by SimpleX (relay origin allowlist
+// covers *.simplex.chat). Override per deployment with NEXT_PUBLIC_WC_PROJECT_ID.
+export const WC_PROJECT_ID =
+  process.env.NEXT_PUBLIC_WC_PROJECT_ID || 'a04774beddf87081f3301392b3ba07d8'
 
 // 102% of price as buffer for fluctuations
 export const CURRENCY_FLUCTUATION_BUFFER_PERCENTAGE = 102n
@@ -23,15 +26,20 @@ export const IS_DEV_ENVIRONMENT =
 
 export const INVALID_NAME = '[Invalid ENS Name]'
 
-export const ENS_LINKS = {
-  X: 'https://x.com/ensdomains',
-  DISCORD: 'https://chat.ens.domains',
-  MIRROR: 'https://ens.mirror.xyz',
-  DISCOURSE: 'https://discuss.ens.domains',
-  GITHUB: 'https://github.com/ensdomains',
-  EMAIL: 'mailto:support@ens.domains',
-  HOMEPAGE: 'https://ens.domains/',
-  YOUTUBE: 'https://www.youtube.com/ensdomains',
+// HOMEPAGE points at the Simplex Network Consortium — the foundation
+// (https://simplexnetwork.org/), not Simplex Chat Ltd. Social accounts
+// are SimpleX Chat's public presence (sourced from https://simplex.chat/);
+// the consortium does not run its own social handles.
+export const SIMPLEX_LINKS = {
+  HOMEPAGE: 'https://simplexnetwork.org/',
+  X: 'https://twitter.com/simplexchat',
+  GITHUB: 'https://github.com/simplex-chat',
+  MASTODON: 'https://mastodon.social/@simplex',
+  REDDIT: 'https://www.reddit.com/r/SimpleXChat/',
+  NOSTR:
+    'https://primal.net/p/npub1exv22uulqnmlluszc4yk92jhs2e5ajcs6mu3t00a6avzjcalj9csm7d828',
+  LEMMY: 'https://lemmy.ml/c/simplex',
+  EMAIL: 'mailto:chat@simplex.chat',
 }
 
 export const DISCONNECTED_PLACEHOLDER_ADDRESS =

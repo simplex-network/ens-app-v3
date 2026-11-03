@@ -4,7 +4,6 @@ import { Control, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import styled, { css } from 'styled-components'
 import { match } from 'ts-pattern'
-import { useAccount } from 'wagmi'
 
 import { Button, Dialog, PlusSVG, Typography } from '@ensdomains/thorin'
 
@@ -16,16 +15,24 @@ import {
   HeaderViewType,
 } from '@app/components/@molecules/ProfileEditor/Header/HeaderViewManager'
 import { ProfileRecord } from '@app/constants/profileRecordOptions'
+import { SIMPLEX_LINK_SEPARATOR } from '@app/constants/simplex'
 import { useContractAddress } from '@app/hooks/chain/useContractAddress'
 import { useLocalStorage } from '@app/hooks/useLocalStorage'
 import { ProfileEditorForm, useProfileEditorForm } from '@app/hooks/useProfileEditorForm'
 
 import { BackObj, RegistrationReducerDataItem, RegistrationStepData } from '../../types'
 import { AddProfileRecordView } from './AddProfileRecordView'
+import { MultiUrlField } from '@app/components/@molecules/MultiUrlField/MultiUrlField'
+import { parseSimplexUrls } from '@app/utils/parseSimplexUrls'
+
 import { CustomProfileRecordInput } from './CustomProfileRecordInput'
 import { ProfileRecordInput } from './ProfileRecordInput'
 import { ProfileRecordTextarea } from './ProfileRecordTextarea'
-import { profileEditorFormToProfileRecords } from './profileRecordUtils'
+import {
+  profileEditorFormToProfileRecords,
+  stripEmptySimplexRecords,
+  withDefaultSimplexRecords,
+} from './profileRecordUtils'
 import { WrappedAvatarButton } from './WrappedAvatarButton'
 import { WrappedHeaderButton } from './WrappedHeaderButton'
 
@@ -83,7 +90,6 @@ const SubmitButton = ({
   control: Control<ProfileEditorForm>
   disabled: boolean
 }) => {
-  const { address } = useAccount()
   const { t } = useTranslation('register')
 
   const records = useWatch({
@@ -101,15 +107,12 @@ const SubmitButton = ({
     name: 'header',
   })
 
-  const hasEthRecord = records.some((record) => record.key === 'eth' && record.value === address)
-  const hasAvatar = !!avatar
-  const hasHeader = !!header
-  const hasOneRecord = records.length === 1
-  const isClean = hasEthRecord && !hasAvatar && !hasHeader && hasOneRecord
+  const hasContent =
+    records.some((record) => !!record.value && !!record.value.trim()) || !!avatar || !!header
 
-  const message = isClean
-    ? t('steps.profile.actions.skipProfile')
-    : t('action.next', { ns: 'common' })
+  const message = hasContent
+    ? t('action.next', { ns: 'common' })
+    : t('steps.profile.actions.skipProfile')
 
   return (
     <Button type="submit" disabled={disabled} data-testid="profile-submit-button">
@@ -147,8 +150,10 @@ const Profile = ({ name, callback, registrationData, resolverExists }: Props) =>
     trigger,
     control,
     handleSubmit,
+    setValue,
     addRecords,
     removeRecordAtIndex,
+    updateRecordAtIndex,
     removeRecordByGroupAndKey: removeRecordByTypeAndKey,
     setAvatar,
     setHeader,
@@ -159,7 +164,7 @@ const Profile = ({ name, callback, registrationData, resolverExists }: Props) =>
     errorForRecordAtIndex,
     isDirtyForRecordAtIndex,
     hasErrors,
-  } = useProfileEditorForm(registrationData.records)
+  } = useProfileEditorForm(withDefaultSimplexRecords(registrationData.records))
 
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false)
 
@@ -214,7 +219,7 @@ const Profile = ({ name, callback, registrationData, resolverExists }: Props) =>
     setAvatarSrcStorage()
     setHeaderSrcStorage()
     const nativeEvent = e?.nativeEvent as SubmitEvent | undefined
-    const newRecords = profileEditorFormToProfileRecords(data)
+    const newRecords = stripEmptySimplexRecords(profileEditorFormToProfileRecords(data))
 
     callback({
       records: newRecords,
@@ -358,6 +363,26 @@ const Profile = ({ name, callback, registrationData, resolverExists }: Props) =>
                   {...register(`records.${index}.value`, {
                     validate: validatorForRecord(field),
                   })}
+                />
+              ))
+              .with({ key: 'simplex.contact' }, { key: 'simplex.channel' }, () => (
+                <MultiUrlField
+                  key={field.id}
+                  recordKey={field.key}
+                  label={labelForRecord(field)}
+                  secondaryLabel={secondaryLabelForRecord(field)}
+                  placeholder={placeholderForRecord(field)}
+                  value={parseSimplexUrls(field.value)}
+                  error={errorForRecordAtIndex(index)}
+                  onChange={(urls) => {
+                    // setValue() preserves the useFieldArray entry's `id`;
+                    // updateRecordAtIndex regenerates it and unmounts the
+                    // MultiUrlField on every keystroke + Add URL click.
+                    setValue(`records.${index}.value`, urls.join(SIMPLEX_LINK_SEPARATOR), {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    })
+                  }}
                 />
               ))
               .otherwise(() => (

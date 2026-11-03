@@ -159,7 +159,8 @@ export const validateExpiry = ({
   expiry: Date | undefined
   pccExpired?: boolean
 }) => {
-  const isDotETH = checkETH2LDFromName(name)
+  const labels = name.split('.')
+  const isDotETH = labels.length === 2 && ['eth', 'testing', 'simplex'].includes(labels[1])
   if (isDotETH) return expiry
   if (!fuses) return undefined
   return pccExpired || fuses.parent.PARENT_CANNOT_CONTROL ? expiry : undefined
@@ -191,6 +192,15 @@ export function getTldFromName(name: string): string | undefined {
   const labels = name.split('.')
   return labels[labels.length - 1]
 }
+
+export function isEthLikeTld(name: string): boolean {
+  const tld = getTldFromName(name)
+  return tld === (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing')
+}
+
+export const IS_TESTING_TLD = (process.env.NEXT_PUBLIC_SIMPLEX_TLD || 'testing') === 'testing'
+
+export const pageTitle = (title: string) => (IS_TESTING_TLD ? `Testing - ${title}` : title)
 
 /*
   Following types are based on this solution: https://stackoverflow.com/questions/53173203/typescript-recursive-function-composition/53175538#53175538

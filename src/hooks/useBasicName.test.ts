@@ -20,6 +20,7 @@ import { makeMockUseValidate } from '../../test/mock/makeMockUseValidate'
 import { makeMockUseWrapperDataData } from '../../test/mock/makeMockUseWrapperDataData.ts'
 import { useContractAddress } from './chain/useContractAddress'
 import useCurrentBlockTimestamp from './chain/useCurrentBlockTimestamp'
+import { useControllerLimits } from './useControllerLimits'
 import { useAddressRecord } from './ensjs/public/useAddressRecord'
 import { useExpiry } from './ensjs/public/useExpiry'
 import { useOwner } from './ensjs/public/useOwner'
@@ -34,6 +35,7 @@ vi.mock('./chain/useCurrentBlockTimestamp')
 vi.mock('./chain/useContractAddress')
 vi.mock('./useValidate')
 vi.mock('./useSupportsTLD')
+vi.mock('./useControllerLimits')
 vi.mock('@app/utils/registrationStatus')
 
 vi.mock('./ensjs/public/useOwner')
@@ -46,6 +48,7 @@ vi.setSystemTime(new Date())
 
 const mockUseValidate = mockFunction(useValidate)
 const mockUseContractAddress = mockFunction(useContractAddress)
+const mockUseControllerLimits = mockFunction(useControllerLimits)
 const mockUseSupportsTLD = mockFunction(useSupportsTLD)
 const mockUseCurrentBlockTimestamp = mockFunction(useCurrentBlockTimestamp)
 const mockGetRegistrationStatus = mockFunction(getRegistrationStatus)
@@ -60,6 +63,12 @@ const mockUseSubgraphRegistrant = mockFunction(useSubgraphRegistrant)
 describe('useBasicName', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseControllerLimits.mockReturnValue({
+      minCharLength: undefined,
+      nftGateEnabled: undefined,
+      smpxNft: undefined,
+      tldSuffix: undefined,
+    })
     mockUseSupportsTLD.mockReturnValue({ data: true, isLoading: false })
     mockUseOwner.mockReturnValue({ data: undefined, isLoading: false })
     mockUseExpiry.mockReturnValue({ data: undefined, isLoading: false })
@@ -544,6 +553,44 @@ describe('useBasicName', () => {
       expect(mockGetRegistrationStatus).toHaveBeenCalledWith(
         expect.objectContaining({ timestamp: 1234567890 - ms5Minutes }),
       )
+    })
+  })
+  describe('tld guard', () => {
+    const setupAvailableName = () => {
+      mockUseValidate.mockReturnValue(makeMockUseValidate('valid-2ld'))
+      mockUseOwner.mockReturnValue({
+        data: makeMockUseOwnerData('registrar:available'),
+        isLoading: false,
+        isCachedData: false,
+      })
+      mockUsePrice.mockReturnValue({
+        data: makeMockUsePriceData('base'),
+        isLoading: false,
+        isCachedData: false,
+      })
+      mockGetRegistrationStatus.mockReturnValue('available')
+    }
+    it('should block registration when the controller tldSuffix does not match the built TLD', () => {
+      setupAvailableName()
+      mockUseControllerLimits.mockReturnValue({
+        minCharLength: undefined,
+        nftGateEnabled: undefined,
+        smpxNft: undefined,
+        tldSuffix: '.simplex',
+      })
+      const { result } = renderHook(() => useBasicName({ name: 'name.testing' }))
+      expect(result.current.registrationStatus).toBe('unsupportedTLD')
+    })
+    it('should not block registration when the controller tldSuffix matches the built TLD', () => {
+      setupAvailableName()
+      mockUseControllerLimits.mockReturnValue({
+        minCharLength: undefined,
+        nftGateEnabled: undefined,
+        smpxNft: undefined,
+        tldSuffix: '.testing',
+      })
+      const { result } = renderHook(() => useBasicName({ name: 'name.testing' }))
+      expect(result.current.registrationStatus).toBe('available')
     })
   })
   describe('mocks', () => {

@@ -14,7 +14,7 @@ import { usePrimaryProfile } from '@app/hooks/usePrimaryProfile'
 import { Content } from '@app/layouts/Content'
 import { ContentGrid } from '@app/layouts/ContentGrid'
 import { OG_IMAGE_URL } from '@app/utils/constants'
-import { makeEtherscanLink, shortenAddress } from '@app/utils/utils'
+import { makeEtherscanLink, pageTitle, shortenAddress } from '@app/utils/utils'
 
 import { useAccountSafely } from '../hooks/account/useAccountSafely'
 
@@ -45,7 +45,6 @@ const Page = () => {
   const loading = !isReady || isPrimaryProfileLoading
 
   const error = isError ? t('errors.names') : ''
-  const hasMismatch = primaryProfile?.match === false
 
   const shortenedAddress = shortenAddress(address)
   const titleContent = t('meta.title', { address: shortenedAddress })
@@ -57,7 +56,7 @@ const Page = () => {
   return (
     <>
       <Head>
-        <title>{titleContent}</title>
+        <title>{pageTitle(titleContent)}</title>
         <meta name="description" content={descriptionContent} />
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:title" content={titleContent} />
@@ -78,10 +77,9 @@ const Page = () => {
             <DetailsContainer>
               {primaryProfile?.name ? (
                 <ProfileSnippet
-                  name={primaryProfile.originalName || primaryProfile.name}
-                  button={hasMismatch ? undefined : 'viewProfile'}
+                  name={primaryProfile.name}
+                  button="viewProfile"
                   getTextRecord={getTextRecord}
-                  hasMismatch={hasMismatch}
                 />
               ) : (
                 <NoProfileSnippet />

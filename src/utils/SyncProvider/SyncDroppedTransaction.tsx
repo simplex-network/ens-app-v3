@@ -206,7 +206,12 @@ export const findDroppedTransactions = async (
     }
 
     // If the transaction has not been cancelled or replaced, it may have been dropped
-    const result = await getTransaction(client, { hash: pendingTransaction.hash })
+    const result = await getTransaction(client, { hash: pendingTransaction.hash }).catch(
+      (e: unknown) => {
+        if (e instanceof TransactionNotFoundError) return null
+        throw e
+      },
+    )
     if (!result) {
       // If a pending transaction is not found, it has been dropped
       store.setFailedTransaction(address, chainId, pendingTransaction.hash)

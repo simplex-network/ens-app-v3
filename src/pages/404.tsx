@@ -5,8 +5,9 @@ import styled, { css } from 'styled-components'
 import ErrorScreen from '@app/components/@atoms/ErrorScreen'
 import Hamburger from '@app/components/@molecules/Hamburger/Hamburger'
 import { LeadingHeading } from '@app/components/LeadingHeading'
+import { pageTitle } from '@app/utils/utils'
 
-import ENSFull from '../assets/ENSFull.svg'
+import ENSFull from '../assets/SimplexFull.svg'
 
 const StyledENS = styled.div(
   ({ theme }) => css`
@@ -38,7 +39,7 @@ export default function Page() {
     <>
       <Head>
         {/* this is wrapped in a string because of the way nextjs renders content, don't remove! */}
-        <title>{`ENS - ${t('notFound')}`}</title>
+        <title>{pageTitle(`SNRC - ${t('notFound')}`)}</title>
       </Head>
       <StyledLeadingHeading>
         <LogoAndLanguage>
